@@ -1,0 +1,71 @@
+# 如果需要删除已存在的索引
+DELETE /user
+
+# 创建user索引
+PUT /user
+{
+"mappings": {
+"properties": {
+"id": {
+"type": "long"
+},
+"userAccount": {
+"type": "keyword"
+},
+"userName": {
+"type": "text",
+"analyzer": "ik_max_word",
+"search_analyzer": "ik_smart",
+"fields": {
+"keyword": {
+"type": "keyword",
+"ignore_above": 256
+}
+}
+},
+"userAvatar": {
+"type": "keyword"
+},
+"userProfile": {
+"type": "text",
+"analyzer": "ik_max_word",
+"search_analyzer": "ik_smart"
+},
+"userRole": {
+"type": "keyword"
+},
+"editTime": {
+"type": "date"
+},
+"createTime": {
+"type": "date"
+},
+"updateTime": {
+"type": "date"
+},
+"isDelete": {
+"type": "integer"
+}
+}
+},
+"settings": {
+"analysis": {
+"analyzer": {
+"text_analyzer": {
+"tokenizer": "ik_max_word",
+"filter": ["lowercase"]
+}
+}
+}
+}
+}
+
+# 测试分词效果
+POST /user/_analyze
+{
+"analyzer": "ik_max_word",
+"text": "鹿梦的图片分享"
+}
+
+# 测试索引是否创建成功
+GET /user/_mapping

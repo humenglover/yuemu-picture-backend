@@ -1,0 +1,102 @@
+# 如果需要删除已存在的索引
+DELETE /picture
+
+# 创建picture索引
+PUT /picture
+{
+"mappings": {
+"properties": {
+"id": {
+"type": "long"
+},
+"url": {
+"type": "keyword"
+},
+"thumbnailUrl": {
+"type": "keyword"
+},
+"name": {
+"type": "text",
+"analyzer": "ik_max_word",
+"search_analyzer": "ik_smart"
+},
+"introduction": {
+"type": "text",
+"analyzer": "ik_max_word",
+"search_analyzer": "ik_smart"
+},
+"category": {
+"type": "keyword"
+},
+"tags": {
+"type": "text",
+"analyzer": "ik_max_word",
+"search_analyzer": "ik_smart"
+},
+"picSize": {
+"type": "long"
+},
+"picWidth": {
+"type": "integer"
+},
+"picHeight": {
+"type": "integer"
+},
+"picScale": {
+"type": "double"
+},
+"picFormat": {
+"type": "keyword"
+},
+"picColor": {
+"type": "keyword"
+},
+"userId": {
+"type": "long"
+},
+"commentCount": {
+"type": "long"
+},
+"likeCount": {
+"type": "long"
+},
+"shareCount": {
+"type": "long"
+},
+"reviewStatus": {
+"type": "integer"
+},
+"reviewMessage": {
+"type": "text"
+},
+"reviewerId": {
+"type": "long"
+},
+"spaceId": {
+"type": "long"
+},
+"reviewTime": {
+"type": "date"
+},
+"createTime": {
+"type": "date"
+},
+"editTime": {
+"type": "date"
+},
+"updateTime": {
+"type": "date"
+}
+}
+},
+"settings": {
+"analysis": {
+"analyzer": {
+"text_analyzer": {
+"tokenizer": "ik_max_word",
+"filter": ["lowercase"]
+}
+}
+}
+}
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.PicturelikeMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.Picturelike">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="userId" jdbcType="BIGINT"/>
+            <result property="pictureId" column="pictureId" jdbcType="BIGINT"/>
+            <result property="isLiked" column="isLiked" jdbcType="TINYINT"/>
+            <result property="firstLikeTime" column="firstLikeTime" jdbcType="TIMESTAMP"/>
+            <result property="lastLikeTime" column="lastLikeTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,userId,pictureId,
+        isLiked,firstLikeTime,lastLikeTime
+    </sql>
+</mapper>
