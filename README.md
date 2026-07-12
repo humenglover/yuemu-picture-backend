@@ -21,6 +21,17 @@
 
 ---
 
+## 📦 相关仓库 | Related Repositories
+
+| 仓库 Repository | 说明 Description |
+|:---|:---|
+| [yuemu-picture-backend](https://github.com/humenglover/yuemu-picture-backend) | 🖥 **后端服务** — Spring Boot REST API（本仓库） |
+| [yuemu-picture-frontend](https://github.com/humenglover/yuemu-picture-frontend) | 🎨 **前端页面** — Vue3 用户端 + 管理后台 |
+| [yuemu-picture-official-docs](https://github.com/humenglover/yuemu-picture-official-docs) | 📚 **官方文档** — 功能指南、API 文档、开发手册 |
+| [yuemu-picture-ai-service](https://github.com/humenglover/yuemu-picture-ai-service) | 🤖 **AI 服务** — Python RAG、YOLO、AI 图像处理 |
+
+---
+
 ## 🛠 技术栈 | Tech Stack
 
 | 分类 Category | 技术 Technology |
