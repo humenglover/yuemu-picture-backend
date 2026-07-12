@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.PexelsCrawlRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.PexelsCrawlRecord">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="pexelsPhotoId" column="pexelsPhotoId" jdbcType="BIGINT"/>
+        <result property="pexelsUrl" column="pexelsUrl" jdbcType="VARCHAR"/>
+        <result property="photographer" column="photographer" jdbcType="VARCHAR"/>
+        <result property="photographerUrl" column="photographerUrl" jdbcType="VARCHAR"/>
+        <result property="photographerId" column="photographerId" jdbcType="BIGINT"/>
+        <result property="queryKeyword" column="queryKeyword" jdbcType="VARCHAR"/>
+        <result property="categoryId" column="categoryId" jdbcType="BIGINT"/>
+        <result property="pageNumber" column="pageNumber" jdbcType="INTEGER"/>
+        <result property="crawlTime" column="crawlTime" jdbcType="TIMESTAMP"/>
+        <result property="uploadStatus" column="uploadStatus" jdbcType="TINYINT"/>
+        <result property="retryCount" column="retryCount" jdbcType="INTEGER"/>
+        <result property="pictureId" column="pictureId" jdbcType="BIGINT"/>
+        <result property="errorMessage" column="errorMessage" jdbcType="VARCHAR"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,pexelsPhotoId,pexelsUrl,
+        photographer,photographerUrl,photographerId,
+        queryKeyword,categoryId,pageNumber,
+        crawlTime,uploadStatus,retryCount,
+        pictureId,errorMessage,createTime,
+        updateTime
+    </sql>
+</mapper>

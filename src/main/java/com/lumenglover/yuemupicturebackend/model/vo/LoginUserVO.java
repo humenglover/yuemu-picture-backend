@@ -1,9 +1,15 @@
 package com.lumenglover.yuemupicturebackend.model.vo;
 
+import cn.hutool.core.util.StrUtil;
+import com.lumenglover.yuemupicturebackend.model.entity.User;
+import com.lumenglover.yuemupicturebackend.utils.VoUrlReplaceUtil;
 import lombok.Data;
+import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 /**
  * 已登录用户视图（脱敏）
@@ -20,6 +26,11 @@ public class LoginUserVO implements Serializable {
      * 账号
      */
     private String userAccount;
+
+    /**
+     * 邮箱
+     */
+    private String email;
 
     /**
      * 用户昵称
@@ -56,5 +67,79 @@ public class LoginUserVO implements Serializable {
      */
     private Date updateTime;
 
+    /**
+     * 性别
+     */
+    private String gender;
+
+    /**
+     * 地区
+     */
+    private String region;
+
+    /**
+     * 生日
+     */
+    private Date birthday;
+
+    /**
+     * 用户标签
+     */
+    private String userTags;
+
+    /**
+     * 主页背景图
+     */
+    private String homepageBg;
+
+    /**
+     * 个性签名
+     */
+    private String personalSign;
+
+    /**
+     * 是否绑定微信
+     */
+    private Boolean hasBindWx;
+
+    /**
+     * 0=普通用户，1=Pro会员，2=Plus会员
+     */
+    private Integer memberType;
+
+    /**
+     * 会员到期时间
+     */
+    private Date memberExpire;
+
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 对象转封装类
+     *
+     * @param user
+     * @return
+     */
+    public static LoginUserVO objToVo(User user) {
+        if (user == null) {
+            return null;
+        }
+        LoginUserVO loginUserVO = new LoginUserVO();
+        BeanUtils.copyProperties(user, loginUserVO);
+
+        // 设置微信绑定状态
+        loginUserVO.setHasBindWx(StrUtil.isNotBlank(user.getMpOpenId()));
+
+        // 替换URL为自定义域名
+        loginUserVO.setUserAvatar(VoUrlReplaceUtil.replaceUrl(loginUserVO.getUserAvatar()));
+        loginUserVO.setHomepageBg(VoUrlReplaceUtil.replaceUrl(loginUserVO.getHomepageBg()));
+
+        // 管理员固定为Plus会员
+        if ("admin".equals(user.getUserRole())) {
+            loginUserVO.setMemberType(2);
+            loginUserVO.setMemberExpire(cn.hutool.core.date.DateUtil.parse("2099-12-31"));
+        }
+
+        return loginUserVO;
+    }
 }

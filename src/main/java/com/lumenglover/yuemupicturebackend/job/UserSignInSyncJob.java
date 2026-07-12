@@ -35,9 +35,9 @@ public class UserSignInSyncJob {
 
     /**
      * 测试环境：0 *除1 * * * ?每2分钟执行一次同步任务
-     * 生产环境改回: 0 0 2 1 * ? (每月1号凌晨2点执行)
+     * 生产环境: 0 0 2 1 * ? (每月1号凌晨2点执行)
      */
-    @Scheduled(cron = "0 0 2 1 * ?")
+    @Scheduled(cron = "0 0 3 1 * ?")
     @Transactional(rollbackFor = Exception.class)
     public void syncUserSignInRecords() {
         try {
@@ -115,7 +115,7 @@ public class UserSignInSyncJob {
                             }
                         } catch (Exception e) {
                             log.error("保存用户ID: {} 的签到记录失败: {}", user.getId(), e.getMessage(), e);
-                            throw e; // 抛出异常以触发事务回滚
+                            throw e;
                         }
                     }
                 } catch (Exception e) {

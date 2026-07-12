@@ -1,6 +1,7 @@
 package com.lumenglover.yuemupicturebackend.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.lumenglover.yuemupicturebackend.utils.VoUrlReplaceUtil;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -100,6 +101,11 @@ public class Picture implements Serializable {
     private Long shareCount;
 
     /**
+     * 收藏数
+     */
+    private Long favoriteCount;
+
+    /**
      * 审核状态：0-待审核; 1-通过; 2-拒绝
      */
     private Integer reviewStatus;
@@ -127,6 +133,7 @@ public class Picture implements Serializable {
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
@@ -137,6 +144,7 @@ public class Picture implements Serializable {
     /**
      * 更新时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
     /**
@@ -145,6 +153,76 @@ public class Picture implements Serializable {
     @TableLogic
     private Integer isDelete;
 
+    /**
+     * 浏览量
+     */
+    private Long viewCount;
+
+    /**
+     * 是否精选 0-非精选 1-精选
+     */
+    @TableField("IsFeature")
+    private Integer isFeature;
+
+    /**
+     * 是否允许下载：0-禁止下载 1-允许下载
+     */
+    @TableField("IsDownload")
+    private Integer isDownload;
+
+    @TableField("recommendScore")
+    private Double recommendScore;
+
+    /**
+     * 热榜分数
+     */
+    @TableField("hotScore")
+    private Double hotScore;
+
+    /**
+     * 是否为草稿：0-非草稿 1-草稿
+     */
+    @TableField("isDraft")
+    private Integer isDraft;
+
+    /**
+     * 是否允许收藏：1-允许、0-禁止
+     */
+    @TableField("allowCollect")
+    private Integer allowCollect;
+
+    /**
+     * 是否允许点赞：1-允许、0-禁止
+     */
+    @TableField("allowLike")
+    private Integer allowLike;
+
+    /**
+     * 是否允许评论：1-允许、0-禁止
+     */
+    @TableField("allowComment")
+    private Integer allowComment;
+
+    /**
+     * 是否允许分享：1-允许、0-禁止
+     */
+    @TableField("allowShare")
+    private Integer allowShare;
+
+    /**
+     * AI 自动识别标签（JSON 数组）
+     */
+    private String aiLabels;
+
     @TableField(exist = false)
+
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 替换URL为自定义域名
+     */
+    public void replaceUrlWithCustomDomain() {
+        this.url = VoUrlReplaceUtil.replaceUrl(this.url);
+        this.thumbnailUrl = VoUrlReplaceUtil.replaceUrl(this.thumbnailUrl);
+    }
 }

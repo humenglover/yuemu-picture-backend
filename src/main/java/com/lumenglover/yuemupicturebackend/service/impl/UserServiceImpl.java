@@ -6,48 +6,82 @@ import cn.hutool.captcha.generator.RandomGenerator;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.DigestUtil;
+import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.lumenglover.yuemupicturebackend.constant.CommonValue;
+import com.lumenglover.yuemupicturebackend.constant.CrawlerConstant;
 import com.lumenglover.yuemupicturebackend.constant.RedisConstant;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
-import com.lumenglover.yuemupicturebackend.model.dto.es.EsUserDao;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import com.lumenglover.yuemupicturebackend.manager.CrawlerManager;
 import com.lumenglover.yuemupicturebackend.manager.FileManager;
+import com.lumenglover.yuemupicturebackend.manager.WxLoginManager;
 import com.lumenglover.yuemupicturebackend.manager.auth.StpKit;
 import com.lumenglover.yuemupicturebackend.mapper.UserMapper;
+import com.lumenglover.yuemupicturebackend.mapper.InviteRecordMapper;
 import com.lumenglover.yuemupicturebackend.mapper.UserSignInRecordMapper;
 import com.lumenglover.yuemupicturebackend.model.dto.file.UploadPictureResult;
 import com.lumenglover.yuemupicturebackend.model.dto.user.UserModifyPassWord;
 import com.lumenglover.yuemupicturebackend.model.dto.user.UserQueryRequest;
-import com.lumenglover.yuemupicturebackend.model.entity.User;
-import com.lumenglover.yuemupicturebackend.model.entity.UserSignInRecord;
-import com.lumenglover.yuemupicturebackend.model.entity.es.EsUser;
+import com.lumenglover.yuemupicturebackend.model.dto.user.UserExportRequest;
+import com.lumenglover.yuemupicturebackend.model.entity.*;
+import com.lumenglover.yuemupicturebackend.model.enums.SpaceLevelEnum;
 import com.lumenglover.yuemupicturebackend.model.enums.UserRoleEnum;
 import com.lumenglover.yuemupicturebackend.model.vo.LoginUserVO;
+import com.lumenglover.yuemupicturebackend.model.vo.SafeUserVO;
+import com.lumenglover.yuemupicturebackend.model.vo.UserPublicVO;
 import com.lumenglover.yuemupicturebackend.model.vo.UserVO;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import com.lumenglover.yuemupicturebackend.service.PictureService;
+import com.lumenglover.yuemupicturebackend.service.PostService;
+import com.lumenglover.yuemupicturebackend.service.PostAttachmentService;
+import com.lumenglover.yuemupicturebackend.service.ViewRecordService;
+import com.lumenglover.yuemupicturebackend.service.SystemNotifyService;
+import com.lumenglover.yuemupicturebackend.service.SpaceService;
+import com.lumenglover.yuemupicturebackend.utils.EmailSenderUtil;
+import com.lumenglover.yuemupicturebackend.utils.TencentCloudImageAuditUtil;
+import com.lumenglover.yuemupicturebackend.utils.SensitiveUtil;
+import com.lumenglover.yuemupicturebackend.utils.DefaultAvatarUtil;
+import com.lumenglover.yuemupicturebackend.config.CosClientConfig;
+import com.lumenglover.yuemupicturebackend.manager.CosManager;
+import com.lumenglover.yuemupicturebackend.model.dto.viewrecord.ViewRecordAddRequest;
+import com.qcloud.cos.model.ciModel.auditing.ImageAuditingResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBitSet;
 import org.redisson.api.RedissonClient;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 
 /**
  * @author 鹿梦
@@ -63,6 +97,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Resource
     private UserMapper userMapper;
     @Resource
+    private InviteRecordMapper inviteRecordMapper;
+    @Resource
     private FileManager fileManager;
 
     @Resource
@@ -72,71 +108,245 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private UserSignInRecordMapper userSignInRecordMapper;
 
     @Resource
-    private EsUserDao esUserDao;
+    private EmailSenderUtil emailSenderUtil;
+
+    @Resource
+    @Lazy
+    private CrawlerManager crawlerManager;
+
+    @Resource
+    @Lazy
+    private PictureService pictureService;
+
+    @Resource
+    @Lazy
+    private PostService postService;
+
+    @Resource
+    @Lazy
+    private PostAttachmentService postAttachmentService;
+
+    @Resource
+    private TencentCloudImageAuditUtil tencentCloudImageAuditUtil;
+
+    @Resource
+    private CosClientConfig cosClientConfig;
+
+    @Resource
+    private CosManager cosManager;
+
+    @Resource
+    private SensitiveUtil sensitiveUtil;
+
+    @Resource
+    private ViewRecordService viewRecordService;
+
+    @Resource
+    @Lazy
+    private SpaceService spaceService;
+
+    @Resource
+    private WxLoginManager wxLoginManager;
+
+    @Resource
+    private SystemNotifyService systemNotifyService;
 
     /**
      * 用户注册
      *
-     * @param userAccount   用户账户
+     * @param email         邮箱
      * @param userPassword  用户密码
      * @param checkPassword 校验密码
+     * @param code          验证码
+     * @param inviteCode    邀请码
      * @return 用户注册成功后的ID
      */
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
-        // 1. 校验参数合法性
-        validateUserInputParams(userAccount, userPassword, checkPassword, true);
-
-        // 2. 检查用户账号是否重复
-        long count=userMapper.selectByAccount(userAccount);
-        if (count > 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该账号已被注册，请更换账号");
+    public long userRegister(String email, String userPassword, String checkPassword, String code, String inviteCode) {
+        // 1. 校验
+        if (StrUtil.hasBlank(email, userPassword, checkPassword, code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱格式错误");
+        }
+        if (userPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码过短");
+        }
+        if (!userPassword.equals(checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
 
-        // 3. 加密密码
-        String encryptPassword = getEncryptPassword(userPassword);
-
-        // 4. 构建并插入用户数据
-        User user = buildUserForRegistration(userAccount, encryptPassword);
-        boolean saveResult = this.save(user);
-        if (!saveResult) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库操作出现问题，请稍后再试");
+        // 校验验证码
+        String verifyCodeKey = String.format("email:code:verify:register:%s", email);
+        String correctCode = stringRedisTemplate.opsForValue().get(verifyCodeKey);
+        if (correctCode == null || !correctCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
         }
-        return user.getId();
+
+        // 校验邀请码
+        Long inviterId = 0L;
+        if (StrUtil.isNotBlank(inviteCode)) {
+            QueryWrapper<User> inviterQuery = new QueryWrapper<>();
+            inviterQuery.eq("inviteCode", inviteCode);
+            User inviter = this.getOne(inviterQuery);
+            if (inviter == null) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "邀请码无效");
+            }
+            inviterId = inviter.getId();
+        }
+
+        synchronized (email.intern()) {
+            // 检查邮箱是否已被注册
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("email", email);
+            long count = this.baseMapper.selectCount(queryWrapper);
+            if (count > 0) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱已被注册");
+            }
+
+            // 检查账号是否已被使用
+            String userAccount = email.substring(0, email.indexOf("@")); // 使用邮箱前缀作为账号
+            // 对账号进行敏感词过滤
+            userAccount = sensitiveUtil.filter(userAccount);
+            queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("userAccount", userAccount);
+            count = this.baseMapper.selectCount(queryWrapper);
+            if (count > 0) {
+                // 如果账号已存在，则在后面加上随机数
+                userAccount = userAccount + RandomUtil.randomNumbers(4);
+            }
+
+            // 2. 加密
+            String encryptPassword = DigestUtil.md5Hex(CommonValue.DEFAULT_SALT + userPassword);
+            // 3. 插入数据
+            User user = new User();
+            user.setUserAccount(userAccount);
+            user.setEmail(email);
+            user.setUserPassword(encryptPassword);
+            // 使用账号作为默认用户名，同样进行敏感词过滤
+            String userName = sensitiveUtil.filter(userAccount);
+            user.setUserName(userName);
+            user.setUserRole(UserRoleEnum.USER.getValue());
+            // 设置随机默认头像
+            user.setUserAvatar(DefaultAvatarUtil.getRandomAvatar());
+            user.setInviterId(inviterId);
+            boolean saveResult = this.save(user);
+            if (!saveResult) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
+            }
+            // 删除验证码
+            stringRedisTemplate.delete(verifyCodeKey);
+
+            // 写入邀请记录并触发升级
+            if (inviterId > 0) {
+                // 检查邀请人今日有效邀请数，判断是否超出每日限额
+                long todayInviteCount = inviteRecordMapper.selectCount(
+                    new QueryWrapper<InviteRecord>()
+                        .eq("inviterId", inviterId)
+                        .eq("status", 1)
+                        .eq("isDelete", 0)
+                        .apply("DATE(confirmTime) = CURDATE()")
+                );
+                boolean isOverDailyLimit = todayInviteCount >= 5;
+
+                InviteRecord inviteRecord = new InviteRecord();
+                inviteRecord.setInviterId(inviterId);
+                inviteRecord.setInviteeId(user.getId());
+                inviteRecord.setInviteCode(inviteCode);
+                inviteRecord.setStatus(1); // 默认有效
+                inviteRecord.setConfirmTime(new Date());
+                inviteRecordMapper.insert(inviteRecord);
+
+                // 触发邀请人的升级与续期结算
+                calculateAndUpgradeMember(inviterId);
+
+                // 发送邀请注册成功通知给邀请人
+                SystemNotify notify = new SystemNotify();
+                notify.setNotifyType("ACCOUNT_CHANGED");
+                notify.setSenderType("SYSTEM");
+                notify.setSenderId("system");
+                notify.setReceiverType("SPECIFIC_USER");
+                notify.setReceiverId(inviterId.toString());
+                notify.setTitle("邀请注册成功");
+                notify.setContent("恭喜！用户 " + user.getUserName() + " 已通过您的邀请链接注册成功。");
+                notify.setRelatedBizType("ACCOUNT");
+                notify.setRelatedBizId(user.getId().toString());
+                notify.setReadStatus(0);
+                notify.setIsGlobal(0);
+                notify.setIsEnabled(1);
+                systemNotifyService.addSystemNotify(notify);
+
+                // 当天邀请已达上限，额外发送限额提醒
+                if (isOverDailyLimit) {
+                    SystemNotify limitNotify = new SystemNotify();
+                    limitNotify.setNotifyType("SYSTEM_ALERT");
+                    limitNotify.setSenderType("SYSTEM");
+                    limitNotify.setSenderId("system");
+                    limitNotify.setReceiverType("SPECIFIC_USER");
+                    limitNotify.setReceiverId(inviterId.toString());
+                    limitNotify.setTitle("邀请人数已达今日上限");
+                    limitNotify.setContent("您今日邀请人数已达到上限（5人/天），用户 " + user.getUserName() + " 的邀请已记录，但不计入本日升级统计。");
+                    limitNotify.setRelatedBizType("ACCOUNT");
+                    limitNotify.setRelatedBizId(user.getId().toString());
+                    limitNotify.setReadStatus(0);
+                    limitNotify.setIsGlobal(0);
+                    limitNotify.setIsEnabled(1);
+                    systemNotifyService.addSystemNotify(limitNotify);
+                }
+            }
+
+            return user.getId();
+        }
     }
 
     /**
      * 用户登录
      *
-     * @param userAccount  用户账户
-     * @param userPassword 用户密码
-     * @param request      HttpServletRequest对象
+     * @param accountOrEmail 账号或邮箱
+     * @param userPassword   用户密码
+     * @param request        HttpServletRequest对象
      * @return 登录后的用户信息视图对象（LoginUserVO）
      */
     @Override
-    public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
-        // 1. 校验参数合法性
-        validateUserInputParams(userAccount, userPassword, null, false);
-
-        // 2. 加密用户输入的密码
-        String encryptPassword = getEncryptPassword(userPassword);
-
-        // 3. 查询数据库验证用户是否存在
+    public LoginUserVO userLogin(String accountOrEmail, String userPassword, HttpServletRequest request) {
+        // 1. 校验
+        if (StrUtil.hasBlank(accountOrEmail, userPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (userPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码格式错误");
+        }
+        // 2. 加密
+        String encryptPassword = DigestUtil.md5Hex(CommonValue.DEFAULT_SALT + userPassword);
+        // 3. 查询用户
+        // 3. 查询用户
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userAccount", userAccount);
-        queryWrapper.eq("userPassword", encryptPassword);
-        User user = this.baseMapper.selectOne(queryWrapper);
+        queryWrapper.eq("userPassword", encryptPassword)
+                .and(wrapper -> {
+                    // 仅支持邮箱登录
+                    wrapper.eq("email", accountOrEmail);
+                    // 如果是纯数字，则支持悦木号（ID）登录
+                    if (accountOrEmail.matches("\\d+")) {
+                        wrapper.or().eq("id", accountOrEmail);
+                    }
+                });
+        User user = this.getOne(queryWrapper);
+        // 用户不存在
         if (user == null) {
-            log.info("user login failed, userAccount cannot match userPassword");
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户名或密码错误，请核对后重新登录");
+            log.info("user login failed, accountOrEmail cannot match userPassword");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
 
-        // 4. 保存用户登录态并返回脱敏后的用户信息
-        request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
-        // 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
+        // 4. 记录用户登录态
+        // 设置 Sa-Token 登录态
         StpKit.SPACE.login(user.getId());
+        // 在 Sa-Token Session 中存入完整的用户信息
         StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
-        return getLoginUserVO(user);
+
+        LoginUserVO loginUserVO = new LoginUserVO();
+        BeanUtil.copyProperties(user, loginUserVO);
+        return loginUserVO;
     }
 
     /**
@@ -155,19 +365,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public User getLoginUser(HttpServletRequest request) {
-        // 判断是否已经登录
-        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
+        // 从 Sa-Token 中获取登录信息
+        if (!StpKit.SPACE.isLogin()) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-        // 从数据库中查询（追求性能的话可以注释，直接返回上述结果）
-        Long userId = currentUser.getId();
-        currentUser = this.getById(userId);
-        if (currentUser == null) {
+
+        Long userId = StpKit.SPACE.getLoginIdAsLong();
+        User user = this.getById(userId);
+        if (user == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-        return currentUser;
+
+        // 替换URL为自定义域名
+        user.replaceUrlWithCustomDomain();
+        return user;
     }
 
     /**
@@ -181,26 +392,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (user == null) {
             return null;
         }
-        LoginUserVO loginUserVO = new LoginUserVO();
-        BeanUtil.copyProperties(user, loginUserVO);
-        return loginUserVO;
+        return LoginUserVO.objToVo(user);
     }
 
     @Override
     public User isLogin(HttpServletRequest request) {
         // 判断是否已经登录
-        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
+        if (!StpKit.SPACE.isLogin()) {
             return null;
         }
-        // 从数据库中查询（追求性能的话可以注释，直接返回上述结果）
-        Long userId = currentUser.getId();
-        currentUser = this.getById(userId);
-        if (currentUser == null) {
-            return null;
+
+        User user = (User) StpKit.SPACE.getSession().get(UserConstant.USER_LOGIN_STATE);
+        if (user == null) {
+            // 如果Sa-Token中没有用户信息，从数据库获取
+            Long userId = StpKit.SPACE.getLoginIdAsLong();
+            user = this.getById(userId);
+            if (user == null) {
+                return null;
+            }
+            // 更新 Sa-Token 中的用户信息
+            StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
         }
-        return currentUser;
+
+        // 替换URL为自定义域名
+        user.replaceUrlWithCustomDomain();
+        return user;
     }
 
     /**
@@ -214,9 +430,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (user == null) {
             return null;
         }
+        return UserVO.objToVo(user);
+    }
+
+    /**
+     * 获得脱敏后的用户信息（根据权限判断是否显示邮箱）
+     *
+     * @param user
+     * @param loginUser 当前登录用户
+     * @return
+     */
+    public UserVO getUserVO(User user, User loginUser) {
+        if (user == null) {
+            return null;
+        }
         UserVO userVO = new UserVO();
         BeanUtil.copyProperties(user, userVO);
+        // 如果不是本人或管理员，将邮箱设置为空
+        if (loginUser == null || (!loginUser.getId().equals(user.getId()) && !isAdmin(loginUser))) {
+            userVO.setEmail(null);
+        }
         return userVO;
+    }
+
+    /**
+     * 获得安全的脱敏后的用户信息（不包含邮箱等敏感信息）
+     *
+     * @param user
+     * @return
+     */
+    @Override
+    public SafeUserVO getSafeUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        return SafeUserVO.objToVo(user);
     }
 
     /**
@@ -237,16 +485,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public boolean userLogout(HttpServletRequest request) {
-        // 判断是否已经登录
-        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-        if (userObj == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
-        }
-        // 移除登录态
-        request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
         // 移除 Sa-Token 登录态
-        StpKit.SPACE.logout();
+        if (StpKit.SPACE.isLogin()) {
+            StpKit.SPACE.logout();
+        }
+        // 如果未登录，也认为登出成功（静默处理）
         return true;
+    }
+
+    /**
+     * 异步删除用户相关数据
+     */
+    @Async("asyncExecutor")
+    public void asyncDeleteUserData(Long userId) {
+        try {
+            // 1. 删除用户发布的图片
+            QueryWrapper<Picture> pictureQueryWrapper = new QueryWrapper<>();
+            pictureQueryWrapper.eq("userId", userId);
+            List<Picture> pictureList = pictureService.list(pictureQueryWrapper);
+            if (!pictureList.isEmpty()) {
+                // 删除数据库记录
+                pictureService.remove(pictureQueryWrapper);
+            }
+
+            // 2. 删除用户发布的帖子
+            QueryWrapper<Post> postQueryWrapper = new QueryWrapper<>();
+            postQueryWrapper.eq("userId", userId);
+            List<Post> postList = postService.list(postQueryWrapper);
+            if (!postList.isEmpty()) {
+                // 删除帖子附件
+                List<Long> postIds = postList.stream()
+                        .map(Post::getId)
+                        .collect(Collectors.toList());
+                QueryWrapper<PostAttachment> attachmentQueryWrapper = new QueryWrapper<>();
+                attachmentQueryWrapper.in("postId", postIds);
+                postAttachmentService.remove(attachmentQueryWrapper);
+                // 删除帖子
+                postService.remove(postQueryWrapper);
+            }
+
+            // 3. 删除用户数据
+            this.removeById(userId);
+
+            // 4. 清理相关缓存
+            String userKey = String.format("user:ban:%d", userId);
+            stringRedisTemplate.delete(userKey);
+
+            log.info("用户相关数据删除完成, userId={}", userId);
+        } catch (Exception e) {
+            log.error("删除用户相关数据失败, userId={}", userId, e);
+            // 这里不抛出异常，因为是异步操作，主流程已经完成
+        }
     }
 
     @Override
@@ -259,6 +548,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String userAccount = userQueryRequest.getUserAccount();
         String userProfile = userQueryRequest.getUserProfile();
         String userRole = userQueryRequest.getUserRole();
+        String gender = userQueryRequest.getGender();
+        String region = userQueryRequest.getRegion();
+        String userTags = userQueryRequest.getUserTags();
+        String personalSign = userQueryRequest.getPersonalSign();
+        String interestField = userQueryRequest.getInterestField();
+        String homepageBg = userQueryRequest.getHomepageBg();
+        String themePreference = userQueryRequest.getThemePreference();
+        String visibilitySetting = userQueryRequest.getVisibilitySetting();
         String sortField = userQueryRequest.getSortField();
         String sortOrder = userQueryRequest.getSortOrder();
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -267,40 +564,43 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.like(StrUtil.isNotBlank(userAccount), "userAccount", userAccount);
         queryWrapper.like(StrUtil.isNotBlank(userName), "userName", userName);
         queryWrapper.like(StrUtil.isNotBlank(userProfile), "userProfile", userProfile);
+        queryWrapper.like(StrUtil.isNotBlank(gender), "gender", gender);
+        queryWrapper.like(StrUtil.isNotBlank(region), "region", region);
+        queryWrapper.like(StrUtil.isNotBlank(userTags), "userTags", userTags);
+        queryWrapper.like(StrUtil.isNotBlank(personalSign), "personalSign", personalSign);
+        queryWrapper.like(StrUtil.isNotBlank(interestField), "interestField", interestField);
+        queryWrapper.like(StrUtil.isNotBlank(homepageBg), "homepageBg", homepageBg);
+        queryWrapper.like(StrUtil.isNotBlank(themePreference), "themePreference", themePreference);
+        queryWrapper.like(StrUtil.isNotBlank(visibilitySetting), "visibilitySetting", visibilitySetting);
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
         return queryWrapper;
     }
 
     @Override
     public boolean changePassword(UserModifyPassWord userModifyPassWord, HttpServletRequest request) {
-        if(StrUtil.hasBlank(userModifyPassWord.getOldPassword(), userModifyPassWord.getNewPassword(), userModifyPassWord.getCheckPassword())){
+        if (StrUtil.hasBlank(userModifyPassWord.getOldPassword(), userModifyPassWord.getNewPassword(),
+                userModifyPassWord.getCheckPassword())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不能为空");
         }
-        if(!userModifyPassWord.getNewPassword().equals(userModifyPassWord.getCheckPassword())){
+        if (!userModifyPassWord.getNewPassword().equals(userModifyPassWord.getCheckPassword())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
-        if(userModifyPassWord.getNewPassword().length() < 8){
+        if (userModifyPassWord.getNewPassword().length() < 8) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "新密码长度不能小于8位");
         }
-        //查询是否有这个用户
+        // 查询是否有这个用户
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("id", userModifyPassWord.getId());
         String encryptPassword = getEncryptPassword(userModifyPassWord.getOldPassword());
         queryWrapper.eq("userPassword", encryptPassword);
         User user = userMapper.selectOne(queryWrapper);
-        if(user == null){
+        if (user == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "原密码错误");
         }
 
         user.setUserPassword(getEncryptPassword(userModifyPassWord.getNewPassword()));
         // 更新MySQL
         boolean result = userMapper.updateById(user) > 0;
-        if (result) {
-            // 更新ES
-            EsUser esUser = new EsUser();
-            BeanUtil.copyProperties(user, esUser);
-            esUserDao.save(esUser);
-        }
         return result;
     }
 
@@ -311,35 +611,56 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public String updateUserAvatar(MultipartFile multipartFile, Long id, HttpServletRequest request) {
-        //判断用户是否存在
+        // 判断用户是否存在
         User user = userMapper.selectById(id);
-        if(user == null){
+        if (user == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
         }
-        //判断用户是否登录
+        // 判断用户是否登录
         User loginUser = getLoginUser(request);
-        if(loginUser == null || !loginUser.getId().equals(id)){
+        if (loginUser == null || !loginUser.getId().equals(id)) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
         }
-        //判断文件是否为空
-        if(multipartFile == null){
+        // 判断文件是否为空
+        if (multipartFile == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件不能为空");
         }
-        //判断文件类型
+        // 判断文件类型
         // 上传图片，得到图片信息
         // 按照用户 id 划分目录
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
         UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
-        //更新用户头像
+
+        // 对上传的图像进行机器审核
+        try {
+            // 获取审核策略类型，可以从配置中读取
+            String bizType = cosClientConfig.getAuditBizType();
+            if (bizType == null) {
+                bizType = ""; // 默认为空，使用系统默认审核策略
+            }
+
+            // 对图像进行审核
+            ImageAuditingResponse auditResponse = tencentCloudImageAuditUtil
+                    .auditImageByUrl(uploadPictureResult.getUrl(), bizType);
+
+            boolean isCompliant = tencentCloudImageAuditUtil.isImageCompliant(auditResponse);
+            String auditLabel = tencentCloudImageAuditUtil.getAuditLabel(auditResponse);
+            Integer auditScore = tencentCloudImageAuditUtil.getAuditScore(auditResponse);
+
+            if (!isCompliant) {
+                log.warn("图像审核未通过，URL: {}, 标签: {}, 分数: {}", uploadPictureResult.getUrl(), auditLabel, auditScore);
+                throw new BusinessException(ErrorCode.OPERATION_ERROR,
+                        "图像审核未通过: " + auditLabel + " (分数: " + auditScore + ")");
+            }
+        } catch (Exception e) {
+            log.error("图像审核服务调用失败，URL: {}, 错误: {}", uploadPictureResult.getUrl(), e.getMessage());
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "图像审核服务异常，上传失败");
+        }
+
+        // 更新用户图像
         user.setUserAvatar(uploadPictureResult.getUrl());
         // 更新MySQL
         boolean result = userMapper.updateById(user) > 0;
-        if (result) {
-            // 更新ES
-            EsUser esUser = new EsUser();
-            BeanUtil.copyProperties(user, esUser);
-            esUserDao.save(esUser);
-        }
         return uploadPictureResult.getUrl();
     }
 
@@ -359,10 +680,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String base64Captcha = Base64.getEncoder().encodeToString(captchaBytes);
         String captchaCode = shearCaptcha.getCode();
 
-        // 使用 Hutool 的 MD5 加密
-        String encryptedCaptcha = DigestUtil.md5Hex(captchaCode);
+        // 使用 UUID 替代 MD5，防止客户端通过暴力破解 MD5 逆推验证码
+        String encryptedCaptcha = java.util.UUID.randomUUID().toString().replace("-", "");
 
-        // 将加密后的验证码和 Base64 编码的图片存储到 Redis 中，设置过期时间为 5 分钟（300 秒）
+        // 将验证码 Token 和验证码原文存储到 Redis 中，设置过期时间为 5 分钟（300 秒）
         stringRedisTemplate.opsForValue().set("captcha:" + encryptedCaptcha, captchaCode, 300, TimeUnit.SECONDS);
 
         Map<String, String> data = new HashMap<>();
@@ -373,6 +694,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 添加用户签到记录
+     *
      * @param userId 用户 id
      * @return 当前用户是否已签到成功
      */
@@ -395,8 +717,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             LocalDate endOfYear = LocalDate.of(currentYear, 12, 31);
             Duration timeUntilEndOfYear = Duration.between(
                     LocalDateTime.now(),
-                    endOfYear.atTime(23, 59, 59)
-            );
+                    endOfYear.atTime(23, 59, 59));
             redissonClient.getBucket(redisKey).expire(timeUntilEndOfYear);
         }
 
@@ -466,8 +787,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 LocalDate endOfYear = LocalDate.of(year, 12, 31);
                 Duration timeUntilEndOfYear = Duration.between(
                         LocalDateTime.now(),
-                        endOfYear.atTime(23, 59, 59)
-                );
+                        endOfYear.atTime(23, 59, 59));
                 redissonClient.getBucket(redisKey).expire(timeUntilEndOfYear);
             }
         }
@@ -485,14 +805,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public boolean validateCaptcha(String userInputCaptcha, String serververifycode) {
-        if (userInputCaptcha!= null && serververifycode!= null) {
-            // 使用Hutool对用户输入的验证码进行MD5加密
-            String encryptedVerifycode = DigestUtil.md5Hex(userInputCaptcha);
-            if(encryptedVerifycode.equals(serververifycode)){
-                return true;
-            }
+        if (StrUtil.hasBlank(userInputCaptcha, serververifycode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码不能为空");
         }
-        throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+        String redisKey = "captcha:" + serververifycode;
+        String correctCode = stringRedisTemplate.opsForValue().get(redisKey);
+        if (correctCode == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码已过期或不存在");
+        }
+        // 校验发生后，立即删除验证码，确保一次性使用，防止重放攻击
+        stringRedisTemplate.delete(redisKey);
+        // 比对用户输入的验证码是否正确
+        if (!userInputCaptcha.equalsIgnoreCase(correctCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+        }
+        return true;
+    }
+
+    @Override
+    public User getLoginUserByToken(String token) {
+        if (StrUtil.isBlank(token)) {
+            return null;
+        }
+
+        try {
+            // 从 Sa-Token 中获取用户 ID
+            Object loginId = StpKit.SPACE.getLoginIdByToken(token);
+            if (loginId == null) {
+                return null;
+            }
+
+            // 获取用户信息
+            Long userId = Long.parseLong(loginId.toString());
+            User user = this.getById(userId);
+
+            if (user == null || user.getId() == null) {
+                return null;
+            }
+
+            return user;
+        } catch (Exception e) {
+            log.error("Token验证失败", e);
+            return null;
+        }
     }
 
     /**
@@ -503,7 +858,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param checkPassword 校验密码（注册时需要，登录时传null）
      * @param isRegister    是否为注册操作
      */
-    private void validateUserInputParams(String userAccount, String userPassword, String checkPassword, boolean isRegister) {
+    private void validateUserInputParams(String userAccount, String userPassword, String checkPassword,
+            boolean isRegister) {
         if (StrUtil.hasBlank(userAccount, userPassword) || (isRegister && StrUtil.hasBlank(checkPassword))) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不能为空");
         }
@@ -513,7 +869,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (userPassword.length() < 8) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码长度不能小于8位");
         }
-        if (isRegister &&!userPassword.equals(checkPassword)) {
+        if (isRegister && !userPassword.equals(checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
     }
@@ -521,7 +877,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     /**
      * 根据注册信息构建User对象
      *
-     * @param userAccount    用户账户
+     * @param userAccount     用户账户
      * @param encryptPassword 加密后的密码
      * @return 构建好的User对象
      */
@@ -538,10 +894,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public boolean removeById(Serializable id) {
         // 从MySQL删除
         boolean result = super.removeById(id);
-        if (result) {
-            // 从ES删除
-            esUserDao.deleteById((Long) id);
-        }
         return result;
     }
 
@@ -549,26 +901,1037 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public boolean removeByIds(Collection<?> idList) {
         // 从MySQL批量删除
         boolean result = super.removeByIds(idList);
-        if (result) {
-            // 从ES批量删除
-            idList.forEach(id -> esUserDao.deleteById((Long) id));
-        }
         return result;
     }
 
     @Override
     public boolean updateById(User entity) {
+        // 对可能包含敏感内容的字段进行过滤
+        if (entity.getUserName() != null) {
+            entity.setUserName(sensitiveUtil.filter(entity.getUserName()));
+        }
+        if (entity.getUserProfile() != null) {
+            entity.setUserProfile(sensitiveUtil.filter(entity.getUserProfile()));
+        }
+        if (entity.getGender() != null) {
+            entity.setGender(sensitiveUtil.filter(entity.getGender()));
+        }
+        if (entity.getRegion() != null) {
+            entity.setRegion(sensitiveUtil.filter(entity.getRegion()));
+        }
+        if (entity.getUserTags() != null) {
+            entity.setUserTags(sensitiveUtil.filter(entity.getUserTags()));
+        }
+        if (entity.getPersonalSign() != null) {
+            entity.setPersonalSign(sensitiveUtil.filter(entity.getPersonalSign()));
+        }
+        if (entity.getInterestField() != null) {
+            entity.setInterestField(sensitiveUtil.filter(entity.getInterestField()));
+        }
+        // 注意：homepageBg是URL字段，不进行敏感词过滤，避免URL被误伤
+        // if (entity.getHomepageBg() != null) {
+        // entity.setHomepageBg(sensitiveUtil.filter(entity.getHomepageBg()));
+        // }
+        if (entity.getThemePreference() != null) {
+            entity.setThemePreference(sensitiveUtil.filter(entity.getThemePreference()));
+        }
+        if (entity.getVisibilitySetting() != null) {
+            entity.setVisibilitySetting(sensitiveUtil.filter(entity.getVisibilitySetting()));
+        }
+
         // 更新MySQL
         boolean result = super.updateById(entity);
-        if (result) {
-            // 更新ES
-            // 获取完整的用户信息
-            User updatedUser = this.getById(entity.getId());
-            // 转换为ES实体
-            EsUser esUser = new EsUser();
-            BeanUtil.copyProperties(updatedUser, esUser);
-            esUserDao.save(esUser);
+
+        // 如果更新成功，同时更新Sa-Token中的用户信息
+        if (result && entity.getId() != null) {
+            // 检查当前用户是否已登录，并且更新的是当前用户的信息
+            if (StpKit.SPACE.isLogin() && StpKit.SPACE.getLoginIdAsLong() == entity.getId().longValue()) {
+                // 从数据库获取完整更新后的用户信息
+                User updatedUser = this.getById(entity.getId());
+                if (updatedUser != null) {
+                    // 更新Sa-Token会话中的用户信息
+                    StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, updatedUser);
+                }
+            }
         }
+
         return result;
+    }
+
+    @Override
+    public void sendEmailCode(String email, String type, HttpServletRequest request) {
+        if (StrUtil.hasBlank(email, type)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+
+        // 检测高频操作
+        crawlerManager.detectFrequentRequest(request);
+
+        // 获取客户端IP
+        String clientIp = request.getRemoteAddr();
+        String ipKey = String.format("email:code:ip:%s", clientIp);
+        String emailKey = String.format("email:code:email:%s", email);
+
+        // 检查IP是否频繁请求验证码
+        String ipCount = stringRedisTemplate.opsForValue().get(ipKey);
+        if (ipCount != null && Integer.parseInt(ipCount) >= 5) {
+            throw new BusinessException(ErrorCode.TOO_MANY_REQUEST, "请求验证码过于频繁，请稍后再试");
+        }
+
+        // 检查邮箱是否频繁请求验证码
+        String emailCount = stringRedisTemplate.opsForValue().get(emailKey);
+        if (emailCount != null && Integer.parseInt(emailCount) >= 3) {
+            throw new BusinessException(ErrorCode.TOO_MANY_REQUEST, "该邮箱请求验证码过于频繁，请稍后再试");
+        }
+
+        // 生成验证码
+        String code = RandomUtil.randomNumbers(6);
+
+        // 发送验证码
+        try {
+            emailSenderUtil.sendEmail(email, code);
+        } catch (Exception e) {
+            log.error("发送邮件失败", e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "发送验证码失败");
+        }
+
+        // 记录IP和邮箱的请求次数，设置1小时过期
+        stringRedisTemplate.opsForValue().increment(ipKey, 1);
+        stringRedisTemplate.expire(ipKey, 1, TimeUnit.HOURS);
+
+        stringRedisTemplate.opsForValue().increment(emailKey, 1);
+        stringRedisTemplate.expire(emailKey, 1, TimeUnit.HOURS);
+
+        // 将验证码存入Redis，设置5分钟过期
+        String verifyCodeKey = String.format("email:code:verify:%s:%s", type, email);
+        stringRedisTemplate.opsForValue().set(verifyCodeKey, code, 5, TimeUnit.MINUTES);
+    }
+
+    @Override
+    public boolean changeEmail(String newEmail, String code, HttpServletRequest request) {
+        // 1. 校验参数
+        if (StrUtil.hasBlank(newEmail, code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (!newEmail.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱格式错误");
+        }
+
+        // 2. 校验验证码
+        String verifyCodeKey = String.format("email:code:verify:changeEmail:%s", newEmail);
+        String correctCode = stringRedisTemplate.opsForValue().get(verifyCodeKey);
+        if (correctCode == null || !correctCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
+        }
+
+        // 3. 获取当前登录用户
+        User loginUser = getLoginUser(request);
+
+        synchronized (newEmail.intern()) {
+            // 4. 检查新邮箱是否已被使用
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("email", newEmail);
+            long count = this.baseMapper.selectCount(queryWrapper);
+            if (count > 0) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "该邮箱已被使用");
+            }
+
+            // 5. 更新邮箱
+            User user = new User();
+            user.setId(loginUser.getId());
+            user.setEmail(newEmail);
+            boolean result = this.updateById(user);
+            if (!result) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "修改邮箱失败");
+            }
+
+            // 6. 删除验证码
+            stringRedisTemplate.delete(verifyCodeKey);
+            return true;
+        }
+    }
+
+    @Override
+    public boolean resetPassword(String email, String newPassword, String checkPassword, String code) {
+        // 1. 校验参数
+        if (StrUtil.hasBlank(email, newPassword, checkPassword, code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+
+        // 2. 校验邮箱格式
+        if (!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$")) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱格式错误");
+        }
+
+        // 3. 校验密码
+        if (newPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码长度不能小于8位");
+        }
+        if (!newPassword.equals(checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+        }
+
+        // 4. 校验验证码
+        String verifyCodeKey = String.format("email:code:verify:resetPassword:%s", email);
+        String correctCode = stringRedisTemplate.opsForValue().get(verifyCodeKey);
+        if (correctCode == null || !correctCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
+        }
+
+        // 5. 查询用户是否存在
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("email", email);
+        User user = this.getOne(queryWrapper);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+
+        // 6. 更新密码
+        String encryptPassword = getEncryptPassword(newPassword);
+        User updateUser = new User();
+        updateUser.setId(user.getId());
+        updateUser.setUserPassword(encryptPassword);
+        boolean result = this.updateById(updateUser);
+
+        if (result) {
+            // 7. 删除验证码
+            stringRedisTemplate.delete(verifyCodeKey);
+
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean banOrUnbanUser(Long userId, Boolean isUnban, User admin) {
+        // 1. 校验参数
+        if (userId == null || userId <= 0 || isUnban == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        // 2. 校验管理员权限
+        if (!UserConstant.ADMIN_ROLE.equals(admin.getUserRole())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "非管理员不能执行此操作");
+        }
+
+        // 3. 获取目标用户信息
+        User targetUser = this.getById(userId);
+        if (targetUser == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+
+        // 4. 检查当前状态是否需要变更
+        boolean isBanned = CrawlerConstant.BAN_ROLE.equals(targetUser.getUserRole());
+        if (isUnban == isBanned) {
+            // 5. 更新用户角色
+            User updateUser = new User();
+            updateUser.setId(userId);
+            updateUser.setUserRole(isUnban ? UserConstant.DEFAULT_ROLE : CrawlerConstant.BAN_ROLE);
+            updateUser.setUpdateTime(new Date());
+            boolean result = this.updateById(updateUser);
+
+            if (result) {
+                // 6. 记录操作日志
+                log.info("管理员[{}]{}用户[{}]",
+                        admin.getUserAccount(),
+                        isUnban ? "解封" : "封禁",
+                        targetUser.getUserAccount());
+
+                // 7. 处理Redis缓存
+                String banKey = String.format("user:ban:%d", userId);
+                if (isUnban) {
+                    stringRedisTemplate.delete(banKey);
+                } else {
+                    stringRedisTemplate.opsForValue().set(banKey, "1");
+                }
+
+            }
+
+            return result;
+        } else {
+            // 状态已经是目标状态
+            String operation = isUnban ? "解封" : "封禁";
+            throw new BusinessException(ErrorCode.OPERATION_ERROR,
+                    String.format("该用户当前%s不需要%s", isUnban ? "未被封禁" : "已被封禁", operation));
+        }
+    }
+
+    @Override
+    public void exportUserData(UserExportRequest exportRequest, HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) throws IOException {
+        if (exportRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        try (HSSFWorkbook workbook = new HSSFWorkbook()) {
+            // 1. 创建工作表
+            HSSFSheet sheet = workbook.createSheet("Sheet1");
+
+            // 2. 创建表头
+            String[] headers = { "用户ID", "账号", "邮箱", "昵称", "角色", "创建时间", "状态" };
+            HSSFRow headerRow = sheet.createRow(0);
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.setColumnWidth(i, 20 * 256);
+                headerRow.createCell(i).setCellValue(headers[i]);
+            }
+
+            // 3. 查询数据
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            setTimeRangeCondition(queryWrapper, exportRequest);
+            List<User> users = this.list(queryWrapper);
+
+            // 4. 填充数据
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            int rowIndex = 1;
+
+            for (User user : users) {
+                HSSFRow dataRow = sheet.createRow(rowIndex++);
+                dataRow.createCell(0).setCellValue(String.valueOf(user.getId()));
+                dataRow.createCell(1).setCellValue(user.getUserAccount());
+                dataRow.createCell(2).setCellValue(user.getEmail());
+                dataRow.createCell(3).setCellValue(user.getUserName());
+                dataRow.createCell(4).setCellValue(getUserRoleText(user.getUserRole()));
+                dataRow.createCell(5)
+                        .setCellValue(user.getCreateTime() != null ? sdf.format(user.getCreateTime()) : "");
+                dataRow.createCell(6).setCellValue(getUserStatusText(user.getUserRole()));
+            }
+
+            // 5. 设置响应头
+            httpResponse.setContentType("application/vnd.ms-excel;charset=utf-8");
+            httpResponse.setCharacterEncoding("UTF-8");
+
+            // 6. 处理文件名
+            String fileName = generateExportFileName(exportRequest.getType(),
+                    exportRequest.getStartTime(), exportRequest.getEndTime());
+            httpResponse.setHeader("Content-Disposition",
+                    "attachment;filename=" + URLEncoder.encode(fileName, "UTF-8") + ".xls");
+
+            // 7. 写入响应
+            workbook.write(httpResponse.getOutputStream());
+        } catch (IOException e) {
+            log.error("导出用户数据失败", e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "导出失败");
+        }
+    }
+
+    /**
+     * 获取用户角色文本
+     */
+    private String getUserRoleText(String role) {
+        if (UserConstant.ADMIN_ROLE.equals(role)) {
+            return "管理员";
+        } else if (UserConstant.DEFAULT_ROLE.equals(role)) {
+            return "普通用户";
+        } else if (CrawlerConstant.BAN_ROLE.equals(role)) {
+            return "已封禁";
+        }
+        return "未知";
+    }
+
+    /**
+     * 获取用户状态文本
+     */
+    private String getUserStatusText(String role) {
+        if (CrawlerConstant.BAN_ROLE.equals(role)) {
+            return "已封禁";
+        }
+        return "正常";
+    }
+
+    /**
+     * 生成导出文件名
+     */
+    private String generateExportFileName(Integer type, Date startTime, Date endTime) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String timeStr = sdf.format(new Date());
+
+        String periodStr;
+        switch (type) {
+            case 1:
+                periodStr = "日报";
+                break;
+            case 2:
+                periodStr = "周报";
+                break;
+            case 3:
+                periodStr = "月报";
+                break;
+            case 4:
+                periodStr = "年报";
+                break;
+            case 5:
+                if (startTime != null && endTime != null) {
+                    periodStr = sdf.format(startTime) + "-" + sdf.format(endTime);
+                } else {
+                    periodStr = "自定义";
+                }
+                break;
+            default:
+                periodStr = "未知";
+        }
+
+        return String.format("用户数据_%s", periodStr);
+    }
+
+    /**
+     * 设置时间范围查询条件
+     */
+    private void setTimeRangeCondition(QueryWrapper<User> queryWrapper, UserExportRequest request) {
+        Date now = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(now);
+
+        // 根据类型设置时间范围
+        switch (request.getType()) {
+            case 1: // 天
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                queryWrapper.ge("createTime", calendar.getTime());
+                break;
+            case 2: // 周
+                calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                queryWrapper.ge("createTime", calendar.getTime());
+                break;
+            case 3: // 月
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                queryWrapper.ge("createTime", calendar.getTime());
+                break;
+            case 4: // 年
+                calendar.set(Calendar.MONTH, Calendar.JANUARY);
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                queryWrapper.ge("createTime", calendar.getTime());
+                break;
+            case 5: // 自定义
+                if (request.getStartTime() != null) {
+                    queryWrapper.ge("createTime", request.getStartTime());
+                }
+                if (request.getEndTime() != null) {
+                    queryWrapper.le("createTime", request.getEndTime());
+                }
+                break;
+            default:
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持的导出类型");
+        }
+    }
+
+    @Override
+    public UserPublicVO getUserPublicInfo(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户ID不能为空");
+        }
+
+        // 查询用户信息
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+
+        return UserPublicVO.objToVo(user);
+    }
+
+    @Override
+    public void addUserViewRecord(long userId, long visitorId, HttpServletRequest request) {
+        try {
+            ViewRecordAddRequest viewRecordAddRequest = new ViewRecordAddRequest();
+            viewRecordAddRequest.setUserId(visitorId); // 访客ID
+            viewRecordAddRequest.setTargetId(userId); // 被浏览的用户ID
+            viewRecordAddRequest.setTargetType(4); // 4-用户
+
+            viewRecordService.addViewRecord(viewRecordAddRequest, request);
+        } catch (Exception e) {
+            log.error("添加用户浏览记录失败", e);
+        }
+    }
+
+    @Override
+    public boolean secureUserDestroy(long userId, String userPassword, String code) {
+        // 1. 校验参数
+        if (StrUtil.hasBlank(userPassword, code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不能为空");
+        }
+
+        // 2. 获取用户信息
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+
+        // 3. 验证用户密码
+        String encryptPassword = getEncryptPassword(userPassword);
+        if (!encryptPassword.equals(user.getUserPassword())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
+        }
+
+        // 4. 验证邮箱验证码
+        String verifyCodeKey = String.format("email:code:verify:userDestroy:%s", user.getEmail());
+        String correctCode = stringRedisTemplate.opsForValue().get(verifyCodeKey);
+        if (correctCode == null || !correctCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
+        }
+
+        // 5. 执行用户数据删除
+        asyncDeleteUserData(userId);
+
+        // 6. 删除验证码
+        stringRedisTemplate.delete(verifyCodeKey);
+
+        return true;
+    }
+
+    @Override
+    public boolean updateUserPermissions(Long userId, Integer allowPrivateChat, Integer allowFollow,
+            Integer showFollowList, Integer showFansList) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户ID不能为空");
+        }
+
+        // 验证参数的有效性
+        List<Integer> validValues = Arrays.asList(0, 1);
+        if (allowPrivateChat != null && !validValues.contains(allowPrivateChat)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "允许私聊参数值非法");
+        }
+        if (allowFollow != null && !validValues.contains(allowFollow)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "允许被关注参数值非法");
+        }
+        if (showFollowList != null && !validValues.contains(showFollowList)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "展示关注列表参数值非法");
+        }
+        if (showFansList != null && !validValues.contains(showFansList)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "展示粉丝列表参数值非法");
+        }
+
+        // 构建更新对象
+        User updateUser = new User();
+        updateUser.setId(userId);
+
+        if (allowPrivateChat != null) {
+            updateUser.setAllowPrivateChat(allowPrivateChat);
+        }
+        if (allowFollow != null) {
+            updateUser.setAllowFollow(allowFollow);
+        }
+        if (showFollowList != null) {
+            updateUser.setShowFollowList(showFollowList);
+        }
+        if (showFansList != null) {
+            updateUser.setShowFansList(showFansList);
+        }
+
+        // 执行更新
+        boolean result = this.updateById(updateUser);
+
+        if (result) {
+            log.info("用户权限更新成功，用户ID：{}", userId);
+        } else {
+            log.error("用户权限更新失败，用户ID：{}", userId);
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean updateUserMultiDeviceLogin(Long userId, Integer allowMultiDeviceLogin) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户ID不能为空");
+        }
+
+        // 验证参数的有效性
+        List<Integer> validValues = Arrays.asList(0, 1);
+        if (allowMultiDeviceLogin != null && !validValues.contains(allowMultiDeviceLogin)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "允许多设备登录参数值非法");
+        }
+
+        // 使用Mapper直接更新
+        int result = userMapper.updateAllowMultiDeviceLogin(userId, allowMultiDeviceLogin);
+
+        if (result > 0) {
+            log.info("用户多设备登录设置更新成功，用户ID：{}，设置值：{}", userId, allowMultiDeviceLogin);
+
+            // 直接处理用户设置更新
+            if (allowMultiDeviceLogin != null && allowMultiDeviceLogin == 0) {
+                // 用户设置为不允许多设备登录，立即踢掉该用户除当前会话外的所有登录
+                log.info("开始处理用户 {} 的不允许多设备登录设置", userId);
+
+                // 获取当前操作的token（如果存在）
+                String currentToken = null;
+                if (StpKit.SPACE.getLoginIdDefaultNull() != null &&
+                        StpKit.SPACE.getLoginIdAsLong() == userId) {
+                    currentToken = StpKit.SPACE.getTokenValue();
+                    log.info("当前操作用户 {} 的Token: {}", userId, currentToken);
+                }
+
+                // 获取该用户的所有登录token列表 - 使用StpKit.SPACE确保一致性
+                java.util.List<String> tokenList = StpKit.SPACE.getTokenValueListByLoginId(userId);
+                log.info("在踢人前，用户 {} 共有 {} 个登录会话", userId, tokenList.size());
+
+                // 踢掉该用户除当前会话外的所有登录会话
+                if (tokenList.size() > 0) {
+                    if (currentToken != null && tokenList.size() > 1) {
+                        // 如果有当前token且存在多个会话，只踢掉其他会话，保留当前会话
+                        log.info("踢掉用户 {} 的其他 {} 个登录会话，保留当前会话", userId, tokenList.size() - 1);
+                        for (String token : tokenList) {
+                            if (!token.equals(currentToken)) {
+                                StpKit.SPACE.logoutByTokenValue(token);
+                                log.info("用户 {} 不允许多设备登录，已踢出其他登录设备，Token: {}", userId, token);
+                            }
+                        }
+                    } else {
+                        // 如果没有当前token或只有一个会话，踢掉所有会话
+                        log.info("踢掉用户 {} 的所有 {} 个登录会话", userId, tokenList.size());
+                        for (String token : tokenList) {
+                            StpKit.SPACE.logoutByTokenValue(token);
+                            log.info("用户 {} 不允许多设备登录，已踢出登录设备，Token: {}", userId, token);
+                        }
+                    }
+                } else {
+                    log.info("用户 {} 没有活跃的登录会话，无需踢人操作", userId);
+                }
+
+                // 确保所有会话都被清理，等待片刻让异步操作完成
+                try {
+                    Thread.sleep(100); // 短暂等待确保踢人操作完成
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            return true;
+        } else {
+            log.error("用户多设备登录设置更新失败，用户ID：{}", userId);
+            return false;
+        }
+    }
+
+    @Override
+    public Integer getUserMultiDeviceLogin(Long userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户ID不能为空");
+        }
+
+        // 使用Mapper查询
+        return userMapper.getAllowMultiDeviceLogin(userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginUserVO userLoginByWxOpenId(String openId, String inviteCode, HttpServletRequest request) {
+        if (StrUtil.isBlank(openId)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "缺少微信识别码");
+        }
+
+        // 2. 查询用户是否存在
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("mpOpenId", openId);
+        User user = this.getOne(queryWrapper);
+
+        // 3. 用户不存在，则自动注册
+        if (user == null) {
+            Long inviterId = 0L;
+            if (StrUtil.isNotBlank(inviteCode)) {
+                QueryWrapper<User> inviterQuery = new QueryWrapper<>();
+                inviterQuery.eq("inviteCode", inviteCode);
+                User inviter = this.getOne(inviterQuery);
+                if (inviter != null) {
+                    inviterId = inviter.getId();
+                }
+            }
+
+            user = new User();
+            user.setMpOpenId(openId);
+            user.setUserAccount("wx_" + RandomUtil.randomString(8));
+            user.setUserName("微信用户_" + RandomUtil.randomString(4));
+            user.setUserAvatar(DefaultAvatarUtil.getRandomAvatar());
+            user.setUserRole(UserRoleEnum.USER.getValue());
+            user.setInviterId(inviterId);
+            // 统一设置默认密码为 12345678
+            user.setUserPassword(getEncryptPassword(CommonValue.DEFAULT_PASSWORD));
+            boolean result = this.save(user);
+            if (!result) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "快捷注册失败");
+            }
+
+            if (inviterId > 0) {
+                // 检查邀请人今日有效邀请数，判断是否超出每日限额
+                long todayInviteCount = inviteRecordMapper.selectCount(
+                    new QueryWrapper<InviteRecord>()
+                        .eq("inviterId", inviterId)
+                        .eq("status", 1)
+                        .eq("isDelete", 0)
+                        .apply("DATE(confirmTime) = CURDATE()")
+                );
+                boolean isOverDailyLimit = todayInviteCount >= 5;
+
+                InviteRecord inviteRecord = new InviteRecord();
+                inviteRecord.setInviterId(inviterId);
+                inviteRecord.setInviteeId(user.getId());
+                inviteRecord.setInviteCode(inviteCode);
+                inviteRecord.setStatus(1);
+                inviteRecord.setConfirmTime(new Date());
+                inviteRecordMapper.insert(inviteRecord);
+
+                calculateAndUpgradeMember(inviterId);
+
+                // 发送邀请注册成功通知给邀请人
+                SystemNotify notify = new SystemNotify();
+                notify.setNotifyType("ACCOUNT_CHANGED");
+                notify.setSenderType("SYSTEM");
+                notify.setSenderId("system");
+                notify.setReceiverType("SPECIFIC_USER");
+                notify.setReceiverId(inviterId.toString());
+                notify.setTitle("邀请注册成功");
+                notify.setContent("恭喜！用户 " + user.getUserName() + " 已通过您的邀请链接注册成功。");
+                notify.setRelatedBizType("ACCOUNT");
+                notify.setRelatedBizId(user.getId().toString());
+                notify.setReadStatus(0);
+                notify.setIsGlobal(0);
+                notify.setIsEnabled(1);
+                systemNotifyService.addSystemNotify(notify);
+
+                // 当天邀请已达上限，额外发送限额提醒
+                if (isOverDailyLimit) {
+                    SystemNotify limitNotify = new SystemNotify();
+                    limitNotify.setNotifyType("SYSTEM_ALERT");
+                    limitNotify.setSenderType("SYSTEM");
+                    limitNotify.setSenderId("system");
+                    limitNotify.setReceiverType("SPECIFIC_USER");
+                    limitNotify.setReceiverId(inviterId.toString());
+                    limitNotify.setTitle("邀请人数已达今日上限");
+                    limitNotify.setContent("您今日邀请人数已达到上限（5人/天），用户 " + user.getUserName() + " 的邀请已记录，但不计入本日升级统计。");
+                    limitNotify.setRelatedBizType("ACCOUNT");
+                    limitNotify.setRelatedBizId(user.getId().toString());
+                    limitNotify.setReadStatus(0);
+                    limitNotify.setIsGlobal(0);
+                    limitNotify.setIsEnabled(1);
+                    systemNotifyService.addSystemNotify(limitNotify);
+                }
+            }
+        }
+
+        // 4. 检查是否被封禁
+        if (CrawlerConstant.BAN_ROLE.equals(user.getUserRole())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "该账号已被封禁");
+        }
+
+        // 5. 记录登录态
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
+
+        return getLoginUserVO(user);
+    }
+
+    @Override
+    public LoginUserVO userLoginByWxCode(String code, HttpServletRequest request) {
+        // 1. 校验验证码获取 openId
+        String openId = wxLoginManager.getOpenIdByCode(code);
+        if (StrUtil.isBlank(openId)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
+        }
+
+        LoginUserVO loginUserVO = this.userLoginByWxOpenId(openId, null, request);
+
+        // 6. 成功后删除验证码
+        wxLoginManager.removeCode(code);
+
+        return loginUserVO;
+    }
+
+    @Override
+    public LoginUserVO doLoginBySaToken(User user, HttpServletRequest request) {
+        if (user == null || user.getId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户信息为空");
+        }
+
+        // 检查用户是否被封禁
+        if (CrawlerConstant.BAN_ROLE.equals(user.getUserRole())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "该账号已被封禁");
+        }
+
+        // 检查用户是否被删除
+        if (user.getIsDelete() == 1) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+
+        // 使用 Sa-Token 记录登录态
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
+
+        // 返回登录用户信息
+        return getLoginUserVO(user);
+    }
+
+    @Override
+    public boolean userBindWxByOpenId(String openId, HttpServletRequest request) {
+        if (StrUtil.isBlank(openId)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "缺少微信识别码");
+        }
+
+        // 2. 获取当前登录用户
+        User loginUser = this.getLoginUser(request);
+        Long userId = loginUser.getId();
+
+        // 3. 唯一性校验：当前账号是否已绑定微信
+        if (StrUtil.isNotBlank(loginUser.getMpOpenId())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该账号已绑定微信，请勿重复绑定");
+        }
+
+        // 4. 唯一性校验：该微信是否已被其他账号绑定
+        synchronized (openId.intern()) {
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("mpOpenId", openId);
+            long count = this.baseMapper.selectCount(queryWrapper);
+            if (count > 0) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "该微信已绑定其他账号，请先解绑或换个微信");
+            }
+
+            // 5. 更新绑定信息
+            User updateUser = new User();
+            updateUser.setId(userId);
+            updateUser.setMpOpenId(openId);
+            boolean result = this.updateById(updateUser);
+            if (!result) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "绑定失败，数据库错误");
+            }
+
+            // 6. 成功后更新 Session 中的用户信息
+            loginUser.setMpOpenId(openId);
+            StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, loginUser);
+
+            return true;
+        }
+    }
+
+    @Override
+    public boolean userBindWx(String code, HttpServletRequest request) {
+        // 1. 校验验证码获取 openId
+        String openId = wxLoginManager.getOpenIdByCode(code);
+        if (StrUtil.isBlank(openId)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
+        }
+
+        boolean result = this.userBindWxByOpenId(openId, request);
+
+        // 删除验证码
+        if (result) {
+            wxLoginManager.removeCode(code);
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean userUnbindWx(HttpServletRequest request) {
+        // 1. 获取当前登录用户
+        User loginUser = this.getLoginUser(request);
+        Long userId = loginUser.getId();
+
+        // 2. 检查是否已绑定微信
+        if (StrUtil.isBlank(loginUser.getMpOpenId())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "您的账号尚未绑定微信，无需解绑");
+        }
+
+        // 3. 显式更新 mpOpenId 为 null (解决 MyBatis-Plus 默认忽略 null 的问题)
+        boolean result = this.lambdaUpdate()
+                .set(User::getMpOpenId, null)
+                .eq(User::getId, userId)
+                .update();
+
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "解绑失败，数据库错误");
+        }
+
+        // 4. 更新 Session 中的用户信息
+        loginUser.setMpOpenId(null);
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, loginUser);
+
+        log.info("用户解绑微信成功，用户ID：{}", userId);
+        return true;
+    }
+
+    @Override
+    public Long getUserIdByAccount(String userAccount) {
+        if (StrUtil.isBlank(userAccount)) {
+            return null;
+        }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userAccount", userAccount);
+        queryWrapper.eq("isDelete", 0);
+        User user = this.getOne(queryWrapper);
+        return user != null ? user.getId() : null;
+    }
+
+    @Override
+    public String generateInviteCode(HttpServletRequest request) {
+        User loginUser = this.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        User user = this.getById(loginUser.getId());
+        if (StrUtil.isNotBlank(user.getInviteCode())) {
+            return user.getInviteCode();
+        }
+
+        // 生成6位唯一邀请码
+        String inviteCode;
+        while (true) {
+            inviteCode = RandomUtil.randomStringUpper(6);
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("inviteCode", inviteCode);
+            if (this.count(queryWrapper) == 0) {
+                break;
+            }
+        }
+
+        user.setInviteCode(inviteCode);
+        this.updateById(user);
+        return inviteCode;
+    }
+
+    private void calculateAndUpgradeMember(Long userId) {
+        User user = this.getById(userId);
+        if (user == null || isAdmin(user)) {
+            return;
+        }
+
+        // 记录升级前的会员状态（用于判断是否需要发送升级通知）
+        int oldMemberType = user.getMemberType() != null ? user.getMemberType() : 0;
+
+        // 1. 获取所有的状态为1的邀请记录
+        QueryWrapper<InviteRecord> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("inviterId", userId);
+        queryWrapper.eq("status", 1);
+        queryWrapper.eq("isDelete", 0);
+        queryWrapper.orderByAsc("confirmTime"); // 按时间升序
+        List<InviteRecord> allRecords = inviteRecordMapper.selectList(queryWrapper);
+
+        // 2. 每天最多算5个防刷
+        Map<String, Integer> dailyCountMap = new HashMap<>();
+        List<InviteRecord> validRecords = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        for (InviteRecord record : allRecords) {
+            if (record.getConfirmTime() == null)
+                continue;
+            String day = sdf.format(record.getConfirmTime());
+            int count = dailyCountMap.getOrDefault(day, 0);
+            if (count < 5) {
+                validRecords.add(record);
+                dailyCountMap.put(day, count + 1);
+            }
+        }
+
+        // 3. 状态机重播
+        int memberType = 0; // 0=普通, 1=Pro, 2=Plus
+        Date memberExpire = null;
+        int currentCycleCount = 0;
+
+        for (InviteRecord record : validRecords) {
+            Date confirmTime = record.getConfirmTime();
+
+            if (memberExpire != null && confirmTime.after(memberExpire)) {
+                memberType = 0;
+                memberExpire = null;
+                currentCycleCount = 0;
+            }
+
+            currentCycleCount++;
+
+            if (memberType == 0) {
+                if (currentCycleCount >= 10) {
+                    memberType = 2; // Plus
+                    memberExpire = DateUtil.offsetDay(confirmTime, 90);
+                    currentCycleCount = 0;
+                } else if (currentCycleCount >= 3) {
+                    memberType = 1; // Pro
+                    memberExpire = DateUtil.offsetDay(confirmTime, 30);
+                    currentCycleCount = 0;
+                }
+            } else if (memberType == 1) {
+                if (currentCycleCount >= 10) {
+                    memberType = 2; // 升级Plus
+                    memberExpire = DateUtil.offsetDay(confirmTime, 90);
+                    currentCycleCount = 0;
+                } else if (currentCycleCount % 2 == 0) {
+                    memberExpire = DateUtil.offsetDay(memberExpire, 15);
+                }
+            } else if (memberType == 2) {
+                if (currentCycleCount % 2 == 0) {
+                    memberExpire = DateUtil.offsetDay(memberExpire, 20);
+                }
+            }
+        }
+
+        // 如果最终计算出的有效期已过期，将会员等级和有效期同时清除（避免写入薄数据）
+        if (memberExpire != null && new Date().after(memberExpire)) {
+            memberType = 0;
+            memberExpire = null; // 同步清除过期时间，避免写入薄数据
+        }
+
+        user.setMemberType(memberType);
+        user.setMemberExpire(memberExpire);
+        this.updateById(user);
+
+        // 会员等级发生升级时，发送升级通知
+        if (memberType > oldMemberType) {
+            try {
+                String tierName = memberType == 2 ? "Plus" : "Pro";
+                SpaceLevelEnum levelEnum = SpaceLevelEnum.getEnumByValue(memberType);
+                int storage = levelEnum != null ? levelEnum.getMaxStorage() : (memberType == 2 ? 5120 : 1024);
+                String expireStr = memberExpire != null
+                        ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(memberExpire)
+                        : "永久";
+                SystemNotify upgradeNotify = new SystemNotify();
+                upgradeNotify.setNotifyType("ACCOUNT_CHANGED");
+                upgradeNotify.setSenderType("SYSTEM");
+                upgradeNotify.setSenderId("system");
+                upgradeNotify.setReceiverType("SPECIFIC_USER");
+                upgradeNotify.setReceiverId(userId.toString());
+                upgradeNotify.setTitle("恭喜升级为 " + tierName + " 会员！");
+                upgradeNotify.setContent("您已成功升级为 " + tierName + " 会员，有效期至 " + expireStr
+                        + "，享受 " + storage + "MB 空间存储及更高 AI 限额！");
+                upgradeNotify.setRelatedBizType("ACCOUNT");
+                upgradeNotify.setRelatedBizId(userId.toString());
+                upgradeNotify.setReadStatus(0);
+                upgradeNotify.setIsGlobal(0);
+                upgradeNotify.setIsEnabled(1);
+                systemNotifyService.addSystemNotify(upgradeNotify);
+            } catch (Exception e) {
+                log.error("发送会员升级通知失败", e);
+            }
+        }
+
+        // 同步更新该用户所有空间的 maxStorage 和 maxSize
+        com.lumenglover.yuemupicturebackend.model.enums.SpaceLevelEnum levelEnum =
+            com.lumenglover.yuemupicturebackend.model.enums.SpaceLevelEnum.getEnumByValue(this.isAdmin(user) ? 2 : memberType);
+        if (levelEnum == null) {
+            levelEnum = com.lumenglover.yuemupicturebackend.model.enums.SpaceLevelEnum.COMMON;
+        }
+        int newMaxStorage = levelEnum.getMaxStorage();
+
+        spaceService.lambdaUpdate()
+                .set(com.lumenglover.yuemupicturebackend.model.entity.Space::getMaxStorage, newMaxStorage)
+                .set(com.lumenglover.yuemupicturebackend.model.entity.Space::getSpaceLevel, levelEnum.getValue())
+                .set(com.lumenglover.yuemupicturebackend.model.entity.Space::getMaxCount, levelEnum.getMaxCount())
+                .set(com.lumenglover.yuemupicturebackend.model.entity.Space::getMaxSize, levelEnum.getMaxSize())
+                .eq(com.lumenglover.yuemupicturebackend.model.entity.Space::getUserId, userId)
+                .update();
+
+        // 如果用户在线，则更新 Session 中的用户信息
+        try {
+            if (StpKit.SPACE.getSessionByLoginId(user.getId(), false) != null) {
+                StpKit.SPACE.getSessionByLoginId(user.getId()).set(UserConstant.USER_LOGIN_STATE, user);
+            }
+        } catch (Exception e) {
+            log.error("更新用户Session失败", e);
+        }
     }
 }

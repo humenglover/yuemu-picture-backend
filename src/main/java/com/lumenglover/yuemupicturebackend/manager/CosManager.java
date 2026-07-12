@@ -58,13 +58,18 @@ public class CosManager {
         picOperations.setIsPicInfo(1);
         // 图片处理规则列表
         List<PicOperations.Rule> rules = new ArrayList<>();
-        // 1. 图片压缩（转成 webp 格式）
+
+        // 根据文件大小动态调整压缩质量
+        int quality = getQualityForFileSize(file.length());
+
+        // 1. 图片压缩（转成 webp 格式，根据文件大小动态调整质量）
         String webpKey = FileUtil.mainName(key) + ".webp";
         PicOperations.Rule compressRule = new PicOperations.Rule();
         compressRule.setFileId(webpKey);
         compressRule.setBucket(cosClientConfig.getBucket());
-        compressRule.setRule("imageMogr2/format/webp");
+        compressRule.setRule(String.format("imageMogr2/format/webp/quality/%d", quality));
         rules.add(compressRule);
+
         // 2. 缩略图处理，仅对 > 20 KB 的图片生成缩略图
         if (file.length() > 2 * 1024) {
             PicOperations.Rule thumbnailRule = new PicOperations.Rule();
@@ -73,12 +78,51 @@ public class CosManager {
             thumbnailRule.setFileId(thumbnailKey);
             thumbnailRule.setBucket(cosClientConfig.getBucket());
             // 缩放规则 /thumbnail/<Width>x<Height>>（如果大于原图宽高，则不处理）
-            thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 384, 384));
+            // 同时设置缩略图质量与原图一致
+            thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>/quality/%d", 1024, 1024, quality));
             rules.add(thumbnailRule);
         }
         // 构造处理参数
         picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
+        return cosClient.putObject(putObjectRequest);
+    }
+
+    /**
+     * 根据文件大小动态确定压缩质量
+     * @param fileSize 文件大小（字节）
+     * @return 压缩质量（1-100）
+     */
+    private int getQualityForFileSize(long fileSize) {
+        if (fileSize < 500 * 1024) { // 小于 500KB
+            return 95; // 高质量
+        } else if (fileSize < 1024 * 1024) { // 小于 1MB
+            return 92; // 较高质量
+        } else if (fileSize < 2 * 1024 * 1024) { // 小于 2MB
+            return 90; // 高质量
+        } else if (fileSize < 5 * 1024 * 1024) { // 小于 5MB
+            return 85; // 中等质量
+        } else { // 5MB及以上
+            return 80; // 适中质量
+        }
+    }
+
+    /**
+     * 上传音频对象
+     *
+     * @param key  唯一键
+     * @param file 文件
+     */
+    public PutObjectResult putAudioObject(String key, File file) {
+        PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key, file);
+        // 设置存储类型为标准存储
+        putObjectRequest.setStorageClass(StorageClass.Standard);
+        // 设置文件的 Content-Type
+        ObjectMetadata metadata = new ObjectMetadata();
+        String contentType = "audio/" + FileUtil.getSuffix(key);
+        metadata.setContentType(contentType);
+        metadata.setContentLength(file.length());
+        putObjectRequest.setMetadata(metadata);
         return cosClient.putObject(putObjectRequest);
     }
 

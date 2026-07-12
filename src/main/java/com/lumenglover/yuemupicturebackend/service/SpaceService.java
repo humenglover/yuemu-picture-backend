@@ -7,9 +7,11 @@ import com.lumenglover.yuemupicturebackend.model.dto.space.SpaceQueryRequest;
 import com.lumenglover.yuemupicturebackend.model.entity.Space;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import com.lumenglover.yuemupicturebackend.model.entity.Activity;
 import com.lumenglover.yuemupicturebackend.model.vo.SpaceVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * @author lumeng
@@ -75,4 +77,46 @@ public interface SpaceService extends IService<Space> {
      * @param space
      */
     void checkSpaceAuth(User loginUser, Space space);
+
+    /**
+     * 获取指定空间的未过期活动列表（最多前10个）
+     *
+     * @param spaceIds 空间ID列表
+     * @return
+     */
+    List<Activity> listSpaceActivities(List<Long> spaceIds);
+
+    /**
+     * 设置空间推荐状态
+     *
+     * @param spaceId 空间ID
+     * @param recommendStatus 推荐状态：0-取消推荐 1-推荐
+     * @param loginUser 当前登录用户
+     * @return 是否成功
+     */
+    boolean setRecommendStatus(Long spaceId, Integer recommendStatus, User loginUser);
+
+    /**
+     * 获取推荐空间列表
+     *
+     * @return 推荐空间列表
+     */
+    List<SpaceVO> listRecommendedSpaces();
+
+    /**
+     * 获取带有活动和推荐用户的空间VO分页结果
+     *
+     * @param spacePage
+     * @param request
+     * @return
+     */
+    Page<SpaceVO> getSpaceVOPageWithActivityAndRecommendedUsers(Page<Space> spacePage, HttpServletRequest request);
+
+    /**
+     * 获取指定用户加入的团队空间列表（包含推荐成员和活动）
+     *
+     * @param userId 用户ID
+     * @return
+     */
+    List<SpaceVO> listMyTeamSpaceWithActivityAndRecommendedUsers(Long userId);
 }

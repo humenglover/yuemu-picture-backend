@@ -1,5 +1,6 @@
 package com.lumenglover.yuemupicturebackend.model.vo;
 
+import com.lumenglover.yuemupicturebackend.utils.VoUrlReplaceUtil;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -25,4 +26,25 @@ public class CommentUserVO implements Serializable {
      * 用户头像
      */
     private String userAvatar;
+
+    /**
+     * 对象转封装类
+     *
+     * @param user
+     * @return
+     */
+    public static CommentUserVO objToVo(com.lumenglover.yuemupicturebackend.model.entity.User user) {
+        if (user == null) {
+            return null;
+        }
+        CommentUserVO commentUserVO = new CommentUserVO();
+        commentUserVO.setId(user.getId());
+        commentUserVO.setUserAccount(user.getUserAccount());
+        commentUserVO.setUserName(user.getUserName());
+
+        // 替换URL为自定义域名
+        commentUserVO.setUserAvatar(VoUrlReplaceUtil.replaceUrl(user.getUserAvatar()));
+
+        return commentUserVO;
+    }
 }

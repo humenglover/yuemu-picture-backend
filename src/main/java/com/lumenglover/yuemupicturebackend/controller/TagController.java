@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
 import javax.annotation.Resource;
 import java.util.List;
 
@@ -55,6 +56,7 @@ public class TagController {
      */
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @RateLimiter(key = "tag_delete", time = 60, count = 10, message = "标签删除过于频繁，请稍后再试")
     public BaseResponse<Boolean> deleteTag(Long id){
         ThrowUtils.throwIf(id == null, ErrorCode.NOT_FOUND_ERROR);
         return ResultUtils.success(tagService.deleteTag(id));
@@ -65,6 +67,7 @@ public class TagController {
      */
     @PostMapping("/search")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @RateLimiter(key = "tag_search", time = 60, count = 30, message = "标签搜索过于频繁，请稍后再试")
     public BaseResponse<List<TagVO>> searchTag(String tagName){
         ThrowUtils.throwIf(tagName == null || tagName.length() == 0, ErrorCode.NOT_FOUND_ERROR);
         return ResultUtils.success(tagService.searchTag(tagName));

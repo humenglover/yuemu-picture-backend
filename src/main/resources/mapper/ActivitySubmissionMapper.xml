@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.ActivitySubmissionMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.ActivitySubmission">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="activityId" column="activityId" jdbcType="BIGINT"/>
+        <result property="userId" column="userId" jdbcType="BIGINT"/>
+        <result property="pictureId" column="pictureId" jdbcType="BIGINT"/>
+        <result property="submissionTitle" column="submissionTitle" jdbcType="VARCHAR"/>
+        <result property="submissionDesc" column="submissionDesc" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="INTEGER"/>
+        <result property="reviewMessage" column="reviewMessage" jdbcType="VARCHAR"/>
+        <result property="voteCount" column="voteCount" jdbcType="INTEGER"/>
+        <result property="ranking" column="ranking" jdbcType="INTEGER"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,activityId,userId,pictureId,submissionTitle,submissionDesc,
+        status,reviewMessage,voteCount,ranking,createTime,updateTime,isDelete
+    </sql>
+</mapper>

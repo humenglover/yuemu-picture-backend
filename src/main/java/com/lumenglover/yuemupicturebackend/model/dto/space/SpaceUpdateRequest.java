@@ -35,5 +35,15 @@ public class SpaceUpdateRequest implements Serializable {
      */
     private Long maxCount;
 
+    /**
+     * 空间简介
+     */
+    private String spaceDesc;
+
+    /**
+     * 空间封面图
+     */
+    private String spaceCover;
+
     private static final long serialVersionUID = 1L;
 }

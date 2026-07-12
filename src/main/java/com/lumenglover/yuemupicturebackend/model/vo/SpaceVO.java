@@ -1,6 +1,8 @@
 package com.lumenglover.yuemupicturebackend.model.vo;
 
+import com.lumenglover.yuemupicturebackend.model.entity.Activity;
 import com.lumenglover.yuemupicturebackend.model.entity.Space;
+import com.lumenglover.yuemupicturebackend.utils.VoUrlReplaceUtil;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
@@ -55,6 +57,26 @@ public class SpaceVO implements Serializable {
     private Long totalCount;
 
     /**
+     * 空间最大存储限额，单位MB（会员配额系统）
+     */
+    private Integer maxStorage;
+
+    /**
+     * 空间已使用容量，单位MB（会员配额系统）
+     */
+    private Integer usedStorage;
+
+    /**
+     * 空间简介
+     */
+    private String spaceDesc;
+
+    /**
+     * 空间封面图
+     */
+    private String spaceCover;
+
+    /**
      * 创建用户 id
      */
     private Long userId;
@@ -75,6 +97,11 @@ public class SpaceVO implements Serializable {
     private Date updateTime;
 
     /**
+     * 是否推荐 0-否 1-是
+     */
+    private Integer isRecommended;
+
+    /**
      * 创建用户信息
      */
     private UserVO user;
@@ -84,6 +111,20 @@ public class SpaceVO implements Serializable {
      */
     private List<String> permissionList = new ArrayList<>();
 
+    /**
+     * 空间成员数量
+     */
+    private Long memberCount;
+
+    /**
+     * 空间相关活动列表
+     */
+    private List<Activity> activities;
+
+    /**
+     * 空间推荐用户列表
+     */
+    private List<SpaceUserVO> recommendedUsers;
 
     private static final long serialVersionUID = 1L;
 
@@ -114,6 +155,10 @@ public class SpaceVO implements Serializable {
         }
         SpaceVO spaceVO = new SpaceVO();
         BeanUtils.copyProperties(space, spaceVO);
+
+        // 替换URL为自定义域名
+        spaceVO.setSpaceCover(VoUrlReplaceUtil.replaceUrl(spaceVO.getSpaceCover()));
+
         return spaceVO;
     }
 }

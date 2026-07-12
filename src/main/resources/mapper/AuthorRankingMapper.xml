@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.AuthorRankingMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.AuthorRanking">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="userId" column="userId" jdbcType="BIGINT"/>
+        <result property="rankingType" column="rankingType" jdbcType="VARCHAR"/>
+        <result property="timeRange" column="timeRange" jdbcType="VARCHAR"/>
+        <result property="contentCount" column="contentCount" jdbcType="BIGINT"/>
+        <result property="totalViewCount" column="totalViewCount" jdbcType="BIGINT"/>
+        <result property="totalLikeCount" column="totalLikeCount" jdbcType="BIGINT"/>
+        <result property="totalCommentCount" column="totalCommentCount" jdbcType="BIGINT"/>
+        <result property="totalFavoriteCount" column="totalFavoriteCount" jdbcType="BIGINT"/>
+        <result property="totalShareCount" column="totalShareCount" jdbcType="BIGINT"/>
+        <result property="fansCount" column="fansCount" jdbcType="BIGINT"/>
+        <result property="followCount" column="followCount" jdbcType="BIGINT"/>
+        <result property="accountAgeDays" column="accountAgeDays" jdbcType="INTEGER"/>
+        <result property="activeDays" column="activeDays" jdbcType="INTEGER"/>
+        <result property="lastPublishTime" column="lastPublishTime" jdbcType="TIMESTAMP"/>
+        <result property="rankingScore" column="rankingScore" jdbcType="DOUBLE"/>
+        <result property="rankingPosition" column="rankingPosition" jdbcType="INTEGER"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 统计图片作者数据 -->
+    <select id="calculatePictureAuthorStats" resultType="map">
+        SELECT
+            p.userId as userId,
+            COUNT(DISTINCT p.id) as contentCount,
+            COALESCE(SUM(p.viewCount), 0) as totalViewCount,
+            COALESCE(SUM(p.likeCount), 0) as totalLikeCount,
+            COALESCE(SUM(p.commentCount), 0) as totalCommentCount,
+            COALESCE(SUM(p.favoriteCount), 0) as totalFavoriteCount,
+            COALESCE(SUM(p.shareCount), 0) as totalShareCount,
+            MAX(p.createTime) as lastPublishTime,
+            COUNT(DISTINCT DATE(p.createTime)) as activeDays
+        FROM picture p
+        WHERE p.isDelete = 0
+          AND p.reviewStatus = 1
+          AND p.isDraft = 0
+          AND p.spaceId IS NULL
+          <if test="startTime != null">
+              AND p.createTime >= #{startTime}
+          </if>
+          <if test="endTime != null">
+              AND p.createTime &lt;= #{endTime}
+          </if>
+        GROUP BY p.userId
+        HAVING contentCount > 0
+    </select>
+
+    <!-- 统计帖子作者数据 -->
+    <select id="calculatePostAuthorStats" resultType="map">
+        SELECT
+            p.userId as userId,
+            COUNT(DISTINCT p.id) as contentCount,
+            COALESCE(SUM(p.viewCount), 0) as totalViewCount,
+            COALESCE(SUM(p.likeCount), 0) as totalLikeCount,
+            COALESCE(SUM(p.commentCount), 0) as totalCommentCount,
+            COALESCE(SUM(p.favoriteCount), 0) as totalFavoriteCount,
+            COALESCE(SUM(p.shareCount), 0) as totalShareCount,
+            MAX(p.createTime) as lastPublishTime,
+            COUNT(DISTINCT DATE(p.createTime)) as activeDays
+        FROM post p
+        WHERE p.isDelete = 0
+          AND p.status = 1
+          AND p.isDraft = 0
+          <if test="startTime != null">
+              AND p.createTime >= #{startTime}
+          </if>
+          <if test="endTime != null">
+              AND p.createTime &lt;= #{endTime}
+          </if>
+        GROUP BY p.userId
+        HAVING contentCount > 0
+    </select>
+
+    <!-- 批量插入或更新 -->
+    <insert id="batchInsertOrUpdate">
+        INSERT INTO author_ranking (
+            id, userId, rankingType, timeRange,
+            contentCount, totalViewCount, totalLikeCount, totalCommentCount,
+            totalFavoriteCount, totalShareCount, fansCount, followCount,
+            accountAgeDays, activeDays, lastPublishTime, rankingScore, rankingPosition
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.id}, #{item.userId}, #{item.rankingType}, #{item.timeRange},
+                #{item.contentCount}, #{item.totalViewCount}, #{item.totalLikeCount}, #{item.totalCommentCount},
+                #{item.totalFavoriteCount}, #{item.totalShareCount}, #{item.fansCount}, #{item.followCount},
+                #{item.accountAgeDays}, #{item.activeDays}, #{item.lastPublishTime}, #{item.rankingScore}, #{item.rankingPosition}
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            contentCount = VALUES(contentCount),
+            totalViewCount = VALUES(totalViewCount),
+            totalLikeCount = VALUES(totalLikeCount),
+            totalCommentCount = VALUES(totalCommentCount),
+            totalFavoriteCount = VALUES(totalFavoriteCount),
+            totalShareCount = VALUES(totalShareCount),
+            fansCount = VALUES(fansCount),
+            followCount = VALUES(followCount),
+            accountAgeDays = VALUES(accountAgeDays),
+            activeDays = VALUES(activeDays),
+            lastPublishTime = VALUES(lastPublishTime),
+            rankingScore = VALUES(rankingScore),
+            rankingPosition = VALUES(rankingPosition),
+            updateTime = CURRENT_TIMESTAMP
+    </insert>
+
+</mapper>

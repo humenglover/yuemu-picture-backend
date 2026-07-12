@@ -4,6 +4,7 @@ import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
 import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
@@ -35,6 +36,7 @@ public class FileController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/test/upload")
+    @RateLimiter(key = "file_test_upload", time = 60, count = 60, message = "测试文件上传过于频繁，请稍后再试")
     public BaseResponse<String> testUploadFile(@RequestPart("file") MultipartFile multipartFile) {
         // 文件目录
         String filename = multipartFile.getOriginalFilename();
@@ -69,6 +71,7 @@ public class FileController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @GetMapping("/test/download/")
+    @RateLimiter(key = "file_test_download", time = 60, count = 60, message = "测试文件下载过于频繁，请稍后再试")
     public void testDownloadFile(String filepath, HttpServletResponse response) throws IOException {
         COSObjectInputStream cosObjectInput = null;
         try {

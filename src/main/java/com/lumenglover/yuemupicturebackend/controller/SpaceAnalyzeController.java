@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -42,6 +43,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/usage")
+    @RateLimiter(key = "space_analyze_usage", time = 60, count = 20, message = "空间使用分析查询过于频繁，请稍后再试")
     public BaseResponse<SpaceUsageAnalyzeResponse> getSpaceUsageAnalyze(
             @RequestBody SpaceUsageAnalyzeRequest spaceUsageAnalyzeRequest,
             HttpServletRequest request) {
@@ -59,6 +61,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/category")
+    @RateLimiter(key = "space_analyze_category", time = 60, count = 20, message = "空间分类分析查询过于频繁，请稍后再试")
     public BaseResponse<List<SpaceCategoryAnalyzeResponse>> getSpaceCategoryAnalyze(
             @RequestBody SpaceCategoryAnalyzeRequest spaceCategoryAnalyzeRequest,
             HttpServletRequest request) {
@@ -76,6 +79,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/tag")
+    @RateLimiter(key = "space_analyze_tag", time = 60, count = 20, message = "空间标签分析查询过于频繁，请稍后再试")
     public BaseResponse<List<SpaceTagAnalyzeResponse>> getSpaceTagAnalyze(
             @RequestBody SpaceTagAnalyzeRequest spaceTagAnalyzeRequest,
             HttpServletRequest request) {
@@ -93,6 +97,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/size")
+    @RateLimiter(key = "space_analyze_size", time = 60, count = 20, message = "空间大小分析查询过于频繁，请稍后再试")
     public BaseResponse<List<SpaceSizeAnalyzeResponse>> getSpaceSizeAnalyze(@RequestBody SpaceSizeAnalyzeRequest spaceSizeAnalyzeRequest,
                                                                             HttpServletRequest request) {
         ThrowUtils.throwIf(spaceSizeAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
@@ -109,6 +114,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/user")
+    @RateLimiter(key = "space_analyze_user", time = 60, count = 20, message = "空间用户分析查询过于频繁，请稍后再试")
     public BaseResponse<List<SpaceUserAnalyzeResponse>> getSpaceUserAnalyze(@RequestBody SpaceUserAnalyzeRequest spaceUserAnalyzeRequest,
                                                                             HttpServletRequest request) {
         ThrowUtils.throwIf(spaceUserAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);
@@ -125,6 +131,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/rank")
+    @RateLimiter(key = "space_analyze_rank", time = 60, count = 20, message = "空间排行分析查询过于频繁，请稍后再试")
     public BaseResponse<List<Space>> getSpaceRankAnalyze(@RequestBody SpaceRankAnalyzeRequest spaceRankAnalyzeRequest,
                                                          HttpServletRequest request) {
         ThrowUtils.throwIf(spaceRankAnalyzeRequest == null, ErrorCode.PARAMS_ERROR);

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.UserLoginRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.UserLoginRecord">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="userId" column="userId" jdbcType="BIGINT"/>
+        <result property="loginTime" column="loginTime" jdbcType="TIMESTAMP"/>
+        <result property="loginIp" column="loginIp" jdbcType="VARCHAR"/>
+        <result property="loginLocation" column="loginLocation" jdbcType="VARCHAR"/>
+        <result property="deviceType" column="deviceType" jdbcType="VARCHAR"/>
+        <result property="deviceName" column="deviceName" jdbcType="VARCHAR"/>
+        <result property="osType" column="osType" jdbcType="VARCHAR"/>
+        <result property="osVersion" column="osVersion" jdbcType="VARCHAR"/>
+        <result property="browserType" column="browserType" jdbcType="VARCHAR"/>
+        <result property="browserVersion" column="browserVersion" jdbcType="VARCHAR"/>
+        <result property="userAgent" column="userAgent" jdbcType="VARCHAR"/>
+        <result property="loginStatus" column="loginStatus" jdbcType="TINYINT"/>
+        <result property="loginMethod" column="loginMethod" jdbcType="VARCHAR"/>
+        <result property="sessionId" column="sessionId" jdbcType="VARCHAR"/>
+        <result property="isNotified" column="isNotified" jdbcType="TINYINT"/>
+        <result property="riskLevel" column="riskLevel" jdbcType="TINYINT"/>
+        <result property="riskReason" column="riskReason" jdbcType="VARCHAR"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,userId,loginTime,loginIp,loginLocation,
+        deviceType,deviceName,osType,osVersion,browserType,
+        browserVersion,userAgent,loginStatus,loginMethod,sessionId,
+        isNotified,riskLevel,riskReason,createTime,updateTime,isDelete
+    </sql>
+</mapper>

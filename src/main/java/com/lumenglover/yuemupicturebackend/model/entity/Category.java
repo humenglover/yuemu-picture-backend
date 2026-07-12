@@ -1,9 +1,7 @@
 package com.lumenglover.yuemupicturebackend.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
+
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Data;
@@ -27,8 +25,14 @@ public class Category implements Serializable {
     private String categoryName;
 
     /**
+     * 分类类型：0-图片分类 1-帖子分类
+     */
+    private Integer type;
+
+    /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
@@ -39,6 +43,7 @@ public class Category implements Serializable {
     /**
      * 分类更新时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
     /**

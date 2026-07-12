@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>悦木系统安全通知</title>
+    <style>
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f3f4f6; /* 非常淡的高级灰底色 */
+            color: #111827;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        /* 核心卡片 */
+        .notification-card {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 540px; /* 进一步收窄，阅读体验更好 */
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        /* 顶部视觉区 */
+        .header {
+            text-align: center;
+            padding: 40px 32px 24px;
+        }
+
+        .icon-shield {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 16px;
+            background-color: #eff6ff; /* 悦木蓝的极浅色 */
+            border-radius: 50%;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #111827;
+            letter-spacing: 0.5px;
+        }
+
+        /* 数据展示区 */
+        .content-body {
+            padding: 0 32px 32px;
+        }
+
+        .info-list {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 8px 20px;
+            margin-bottom: 24px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .value {
+            font-size: 14px;
+            color: #0f172a;
+            font-weight: 500;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace; /* 让 IP 和数字更有科技感 */
+            text-align: right;
+            word-break: break-all;
+            margin-left: 16px;
+        }
+
+        .value.highlight {
+            color: #2563eb; /* 悦木蓝 */
+            font-weight: 600;
+        }
+
+        /* 提示说明区 */
+        .alert-message {
+            background-color: #eff6ff; /* 悦木蓝背景 */
+            border-left: 3px solid #2563eb; /* 悦木蓝左侧边框 */
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1e3a8a;
+        }
+
+        /* 底部版权区 */
+        .footer {
+            text-align: center;
+            padding: 24px 32px;
+            border-top: 1px solid #f1f5f9;
+            background-color: #fafafa;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .footer-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: #1d4ed8;
+        }
+
+        /* =========================================
+           移动端深度适配 (无边距、沉浸式体验)
+           ========================================= */
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 0; /* 彻底去掉外层留白 */
+                background-color: #ffffff; /* 与卡片融为一体 */
+                align-items: flex-start;
+            }
+
+            .notification-card {
+                border-radius: 0;
+                box-shadow: none;
+                max-width: 100%;
+            }
+
+            .header {
+                padding: 40px 20px 20px;
+            }
+
+            .content-body {
+                padding: 0 20px 32px;
+            }
+
+            /* 手机屏幕太窄时，将左右结构改为上下结构，防止长邮箱和长IP被挤扁 */
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                padding: 12px 0;
+            }
+
+            .value {
+                margin-left: 0;
+                text-align: left;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="notification-card">
+
+    <div class="header">
+        <div class="icon-shield">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <h1 class="title">异常流量检测通知</h1>
+    </div>
+
+    <div class="content-body">
+
+        <div class="info-list">
+            <div class="info-row">
+                <span class="label">用户 ID</span>
+                <span class="value">:userId</span>
+            </div>
+            <div class="info-row">
+                <span class="label">用户账号</span>
+                <span class="value">:userAccount</span>
+            </div>
+            <div class="info-row">
+                <span class="label">绑定邮箱</span>
+                <span class="value">:userEmail</span>
+            </div>
+            <div class="info-row">
+                <span class="label">来源 IP</span>
+                <span class="value">:ipAddress</span>
+            </div>
+            <div class="info-row">
+                <span class="label">触发阈值</span>
+                <span class="value highlight">:accessCount 次 / 3分钟</span>
+            </div>
+            <div class="info-row">
+                <span class="label">拦截时间</span>
+                <span class="value">:detectTime</span>
+            </div>
+        </div>
+
+        <div class="alert-message">
+            系统检测到该账户在极短时间内发起高频访问，疑似自动化爬虫脚本。为保障服务稳定性，系统已暂时阻断该请求源。请管理员核实该访问日志，决定是否解除限制或永久封禁。
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">
+            来自 <a href="https://lumenglover.com" class="footer-link" target="_blank">悦木系统</a> · 记录学习生活的每一分钟
+        </p>
+    </div>
+
+</div>
+
+</body>
+</html>

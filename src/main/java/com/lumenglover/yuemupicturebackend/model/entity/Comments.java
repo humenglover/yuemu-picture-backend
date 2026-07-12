@@ -1,9 +1,6 @@
 package com.lumenglover.yuemupicturebackend.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -28,9 +25,19 @@ public class Comments implements Serializable {
     private Long userId;
 
     /**
-     *
+     * 评论目标ID
      */
-    private Long pictureId;
+    private Long targetId;
+
+    /**
+     * 评论目标类型：1-图片 2-帖子
+     */
+    private Integer targetType;
+
+    /**
+     * 评论目标所属用户ID
+     */
+    private Long targetUserId;
 
     /**
      *
@@ -40,6 +47,7 @@ public class Comments implements Serializable {
     /**
      *
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
@@ -61,6 +69,21 @@ public class Comments implements Serializable {
      *
      */
     private Long dislikeCount;
+
+    /**
+     * 是否已读（0-未读，1-已读）
+     */
+    private Integer isRead;
+
+    /**
+     * 最顶级评论ID
+     */
+    private Long rootCommentId;
+
+    /**
+     * 评论位置（省份）
+     */
+    private String location;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

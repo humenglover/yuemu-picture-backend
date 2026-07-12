@@ -40,5 +40,45 @@ public class UserQueryRequest extends PageRequest implements Serializable {
      */
     private String userRole;
 
+    /**
+     * 用户性别
+     */
+    private String gender;
+
+    /**
+     * 所在地区
+     */
+    private String region;
+
+    /**
+     * 个人标签
+     */
+    private String userTags;
+
+    /**
+     * 个性签名
+     */
+    private String personalSign;
+
+    /**
+     * 兴趣领域
+     */
+    private String interestField;
+
+    /**
+     * 主页背景图URL
+     */
+    private String homepageBg;
+
+    /**
+     * 主题偏好
+     */
+    private String themePreference;
+
+    /**
+     * 内容可见性设置
+     */
+    private String visibilitySetting;
+
     private static final long serialVersionUID = 1L;
 }

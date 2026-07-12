@@ -18,9 +18,14 @@ public class CommentsAddRequest implements Serializable {
     private Long userId;
 
     /**
-     *评论id
+     * 评论目标ID
      */
-    private Long pictureId;
+    private Long targetId;
+
+    /**
+     * 评论目标类型：1-图片 2-帖子，默认为1(图片)
+     */
+    private Integer targetType = 1;
 
     /**
      *内容

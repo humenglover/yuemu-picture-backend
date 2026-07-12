@@ -15,14 +15,5 @@ public class CommentsDeleteRequest implements Serializable {
      */
     private Long commentId;
 
-    /**
-     *  用户id
-     */
-    private Long userId;
-
-    /**
-     * 图片id
-     */
-    private Long pictureId;
-
+    private static final long serialVersionUID = 1L;
 }

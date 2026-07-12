@@ -15,26 +15,38 @@ import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
 import com.lumenglover.yuemupicturebackend.manager.auth.SpaceUserAuthManager;
 import com.lumenglover.yuemupicturebackend.model.dto.space.*;
+import com.lumenglover.yuemupicturebackend.model.entity.Activity;
 import com.lumenglover.yuemupicturebackend.model.entity.Space;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
 import com.lumenglover.yuemupicturebackend.model.enums.SpaceLevelEnum;
+import com.lumenglover.yuemupicturebackend.model.vo.SpaceUserVO;
 import com.lumenglover.yuemupicturebackend.model.vo.SpaceVO;
+import com.lumenglover.yuemupicturebackend.model.enums.SpaceTypeEnum;
+import com.lumenglover.yuemupicturebackend.model.enums.SpaceRoleEnum;
+import com.lumenglover.yuemupicturebackend.model.entity.SpaceUser;
+
 import com.lumenglover.yuemupicturebackend.service.SpaceService;
+import com.lumenglover.yuemupicturebackend.service.SpaceUserService;
 import com.lumenglover.yuemupicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -55,7 +67,13 @@ public class SpaceController {
     @Resource
     private SpaceUserAuthManager spaceUserAuthManager;
 
+
+
+    @Resource
+    private SpaceUserService spaceUserService;
+
     @PostMapping("/add")
+    @RateLimiter(key = "space_add", time = 3600, count = 5, message = "空间创建过于频繁，请稍后再试")
     public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(spaceAddRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
@@ -64,6 +82,7 @@ public class SpaceController {
     }
 
     @PostMapping("/delete")
+    @RateLimiter(key = "space_delete", time = 60, count = 10, message = "空间删除过于频繁，请稍后再试")
     public BaseResponse<Boolean> deleteSpace(@RequestBody DeleteRequest deleteRequest
             , HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
@@ -85,6 +104,27 @@ public class SpaceController {
     }
 
     /**
+     * 批量删除空间
+     */
+    @PostMapping("/delete/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> deleteBatchSpace(@RequestBody List<DeleteRequest> deleteRequestList) {
+        if (CollectionUtils.isEmpty(deleteRequestList)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        // 获取要删除的空间ID列表
+        List<Long> ids = deleteRequestList.stream()
+                .map(DeleteRequest::getId)
+                .collect(Collectors.toList());
+
+        // 批量删除MySQL数据
+        boolean result = spaceService.removeByIds(ids);
+
+        return ResultUtils.success(result);
+    }
+
+    /**
      * 更新空间（仅管理员可用）
      *
      * @param spaceUpdateRequest
@@ -93,6 +133,7 @@ public class SpaceController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @RateLimiter(key = "space_update", time = 60, count = 10, message = "空间更新过于频繁，请稍后再试")
     public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest,
                                              HttpServletRequest request) {
         if (spaceUpdateRequest == null || spaceUpdateRequest.getId() <= 0) {
@@ -109,10 +150,11 @@ public class SpaceController {
         long id = spaceUpdateRequest.getId();
         Space oldSpace = spaceService.getById(id);
         ThrowUtils.throwIf(oldSpace == null, ErrorCode.NOT_FOUND_ERROR);
-        // 操作数据库
+
+        // 更新MySQL
         boolean result = spaceService.updateById(space);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(true);
+
+        return ResultUtils.success(result);
     }
 
     /**
@@ -133,6 +175,7 @@ public class SpaceController {
      * 根据 id 获取空间（封装类）
      */
     @GetMapping("/get/vo")
+    @RateLimiter(key = "space_get_vo", time = 60, count = 50, message = "空间详情查询过于频繁，请稍后再试")
     public BaseResponse<SpaceVO> getSpaceVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
@@ -164,6 +207,7 @@ public class SpaceController {
      * 分页获取空间列表（封装类）
      */
     @PostMapping("/list/page/vo")
+    @RateLimiter(key = "space_list_vo", time = 60, count = 30, message = "空间列表查询过于频繁，请稍后再试")
     public BaseResponse<Page<SpaceVO>> listSpaceVOByPage(@RequestBody SpaceQueryRequest spaceQueryRequest,
                                                          HttpServletRequest request) {
         long current = spaceQueryRequest.getCurrent();
@@ -173,14 +217,18 @@ public class SpaceController {
         // 查询数据库
         Page<Space> spacePage = spaceService.page(new Page<>(current, size),
                 spaceService.getQueryWrapper(spaceQueryRequest));
-        // 获取封装类
-        return ResultUtils.success(spaceService.getSpaceVOPage(spacePage, request));
+
+        // 获取封装类（包含活动和推荐用户信息）
+        Page<SpaceVO> spaceVOPage = spaceService.getSpaceVOPageWithActivityAndRecommendedUsers(spacePage, request);
+
+        return ResultUtils.success(spaceVOPage);
     }
 
     /**
      * 编辑空间（给用户使用）
      */
     @PostMapping("/edit")
+    @RateLimiter(key = "space_edit", time = 60, count = 10, message = "空间编辑过于频繁，请稍后再试")
     public BaseResponse<Boolean> editSpace(@RequestBody SpaceEditRequest spaceEditRequest, HttpServletRequest request) {
         if (spaceEditRequest == null || spaceEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -203,10 +251,11 @@ public class SpaceController {
         if (!oldSpace.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
-        // 操作数据库
+
+        // 更新MySQL
         boolean result = spaceService.updateById(space);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(true);
+
+        return ResultUtils.success(result);
     }
 
     /**
@@ -225,5 +274,77 @@ public class SpaceController {
                 ))
                 .collect(Collectors.toList());
         return ResultUtils.success(spaceLevelList);
+    }
+
+    /**
+     * 设置空间推荐状态
+     *
+     * @param spaceId 空间ID
+     * @param recommendStatus 推荐状态：0-取消推荐 1-推荐
+     * @param request
+     * @return
+     */
+    @PostMapping("/recommend")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @RateLimiter(key = "space_recommend", time = 60, count = 10, message = "空间推荐设置过于频繁，请稍后再试")
+    public BaseResponse<Boolean> setRecommendStatus(@RequestParam Long spaceId, @RequestParam Integer recommendStatus, HttpServletRequest request) {
+        // 校验参数
+        ThrowUtils.throwIf(spaceId == null || recommendStatus == null, ErrorCode.PARAMS_ERROR);
+
+        User loginUser = userService.getLoginUser(request);
+        boolean result = spaceService.setRecommendStatus(spaceId, recommendStatus, loginUser);
+
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 获取推荐空间列表
+     *
+     * @param request
+     * @return
+     */
+    @GetMapping("/recommended")
+    @RateLimiter(key = "space_list_recommended", time = 60, count = 30, message = "推荐空间列表查询过于频繁，请稍后再试")
+    public BaseResponse<List<SpaceVO>> listRecommendedSpaces(HttpServletRequest request) {
+        List<SpaceVO> spaceVOList = spaceService.listRecommendedSpaces();
+        return ResultUtils.success(spaceVOList);
+    }
+
+    /**
+     * AI Agent 专用：获取当前用户的所有可用空间（私有空间 + 加入的团队空间）
+     */
+    @GetMapping("/list/ai")
+    @RateLimiter(key = "space_list_ai", time = 60, count = 30, message = "AI空间查询过于频繁，请稍后再试")
+    public BaseResponse<List<SpaceVO>> listAvailableSpacesForAI(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+
+        List<SpaceVO> availableSpaces = new ArrayList<>();
+
+        // 1. 查询私有空间
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Space> privateWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+        privateWrapper.eq("userId", userId);
+        privateWrapper.eq("spaceType", SpaceTypeEnum.PRIVATE.getValue());
+        List<Space> privateSpaces = spaceService.list(privateWrapper);
+        if (privateSpaces != null && !privateSpaces.isEmpty()) {
+            availableSpaces.addAll(privateSpaces.stream().map(SpaceVO::objToVo).collect(Collectors.toList()));
+        }
+
+        // 2. 查询加入的团队空间（过滤出有编辑和上传权限的角色）
+        List<SpaceUser> spaceUserList = spaceUserService.lambdaQuery()
+                .eq(SpaceUser::getUserId, userId)
+                .eq(SpaceUser::getStatus, 1) // 只查已通过的
+                .in(SpaceUser::getSpaceRole, SpaceRoleEnum.ADMIN.getValue(), SpaceRoleEnum.EDITOR.getValue()) // 仅限管理员和编辑者
+                .list();
+
+        if (spaceUserList != null && !spaceUserList.isEmpty()) {
+            List<Long> spaceIds = spaceUserList.stream().map(SpaceUser::getSpaceId).collect(Collectors.toList());
+            List<Space> teamSpaceList = spaceService.listByIds(spaceIds);
+            if (teamSpaceList != null && !teamSpaceList.isEmpty()) {
+                availableSpaces.addAll(teamSpaceList.stream().map(SpaceVO::objToVo).collect(Collectors.toList()));
+            }
+        }
+
+        return ResultUtils.success(availableSpaces);
     }
 }

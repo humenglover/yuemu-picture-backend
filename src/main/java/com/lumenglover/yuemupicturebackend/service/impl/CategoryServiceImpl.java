@@ -14,17 +14,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* @author 鹿梦
-* @description 针对表【category(分类)】的数据库操作Service实现
-* @createDate 2024-12-13 17:37:23
-*/
+ * @author 鹿梦
+ * @description 针对表【category(分类)】的数据库操作Service实现
+ * @createDate 2024-12-13 17:37:23
+ */
 @Service
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category>
-    implements CategoryService {
+        implements CategoryService {
 
     @Override
-    public List<String> listCategory() {
-        return this.baseMapper.listCategory();
+    public List<String> listCategoryByType(Integer type) {
+        return this.baseMapper.listCategoryByType(type);
     }
 
     @Override
@@ -46,12 +46,22 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category>
     }
 
     @Override
-    public List<CategoryVO> findCategory(String categoryName) {
-        //查询条件改造
+    public List<CategoryVO> findCategory(String categoryName, Integer type) {
         QueryWrapper<Category> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("categoryName", categoryName);
+        if (type != null) {
+            queryWrapper.eq("type", type);
+        }
         List<Category> categoryList = this.baseMapper.selectList(queryWrapper);
         return listCategoryVO(categoryList);
+    }
+
+    @Override
+    public boolean addCategory(String categoryName, Integer type) {
+        Category category = new Category();
+        category.setCategoryName(categoryName);
+        category.setType(type);
+        return this.save(category);
     }
 }
 

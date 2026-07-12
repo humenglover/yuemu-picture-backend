@@ -25,4 +25,14 @@ public class SearchRequest {
      * 页面大小
      */
     private Integer pageSize = 10;
+
+    /**
+     * 用户ID
+     */
+    private Long userId;
+
+    /**
+     * 是否启用语义搜索
+     */
+    private Boolean enableSemanticSearch;
 }

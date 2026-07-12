@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>悦木验证码</title>
+    <style>
+        /* 基础重置，确保在各类邮箱客户端中的表现一致 */
+        body, p, h1, h2, h3, ul, li {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: #111827;
+            -webkit-font-smoothing: antialiased;
+            padding: 40px 20px;
+        }
+
+        /* 核心信件容器 */
+        .mail-container {
+            max-width: 520px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+            border: 1px solid #f1f5f9;
+        }
+
+        /* 内部排版留白 */
+        .mail-content {
+            padding: 40px 48px;
+        }
+
+        /* 极简 Logo 区域 */
+        .brand-header {
+            margin-bottom: 32px;
+        }
+
+        .brand-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2563eb; /* 悦木蓝 */
+            letter-spacing: 1px;
+        }
+
+        /* 严谨的左对齐标题和说明 */
+        .mail-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+
+        .mail-desc {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #475569;
+            margin-bottom: 32px;
+        }
+
+        /* 绝对居中的视觉焦点：验证码 */
+        .code-showcase {
+            background-color: #eff6ff; /* 极浅的蓝底 */
+            border-radius: 8px;
+            text-align: center;
+            padding: 24px 0;
+            margin-bottom: 32px;
+        }
+
+        .code-numbers {
+            font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+            font-size: 38px;
+            font-weight: 700;
+            color: #2563eb;
+            letter-spacing: 8px;
+            margin: 0;
+            line-height: 1;
+        }
+
+        /* 底部安全提示区 */
+        .security-notes {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 24px;
+        }
+
+        .note-item {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .note-item::before {
+            content: "•";
+            color: #cbd5e1;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+
+        /* 邮件外围页脚 */
+        .mail-footer {
+            max-width: 520px;
+            margin: 24px auto 0;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .footer-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* =========================================
+           移动端深度适配
+           ========================================= */
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 20px 10px;
+            }
+
+            .mail-content {
+                padding: 32px 24px; /* 缩小内边距 */
+            }
+
+            .mail-title {
+                font-size: 20px;
+            }
+
+            .code-numbers {
+                font-size: 32px;
+                letter-spacing: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="mail-container">
+    <div class="mail-content">
+
+        <div class="brand-header">
+            <div class="brand-logo">YUEMU</div>
+        </div>
+
+        <h1 class="mail-title">验证您的邮箱地址</h1>
+        <p class="mail-desc">
+            您好，您正在进行悦木图库的身份验证操作。请输入下方的 6 位验证码以完成验证。
+        </p>
+
+        <div class="code-showcase">
+            <div class="code-numbers">000000</div>
+        </div>
+
+        <div class="security-notes">
+            <div class="note-item">此验证码在 5 分钟内有效。</div>
+            <div class="note-item">如果这不是您本人的操作，请忽略此邮件。</div>
+            <div class="note-item">请勿将验证码转发给他人，以免造成账号被盗或个人信息泄露。</div>
+        </div>
+
+    </div>
+</div>
+
+<div class="mail-footer">
+    <p class="footer-text">
+        © 2026 <a href="https://yuemutuku.com" class="footer-link" target="_blank">悦木图库</a> · 记录学习生活的每一分钟
+    </p>
+</div>
+</body>
+</html>

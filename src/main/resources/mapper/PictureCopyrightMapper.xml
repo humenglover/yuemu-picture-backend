@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.PictureCopyrightMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.PictureCopyright">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="pictureId" column="pictureId" jdbcType="BIGINT"/>
+        <result property="userId" column="userId" jdbcType="BIGINT"/>
+        <result property="copyrightCode" column="copyrightCode" jdbcType="VARCHAR"/>
+        <result property="copyrightOwner" column="copyrightOwner" jdbcType="VARCHAR"/>
+        <result property="copyrightDesc" column="copyrightDesc" jdbcType="VARCHAR"/>
+        <result property="allowCommercial" column="allowCommercial" jdbcType="TINYINT"/>
+        <result property="requireAttribution" column="requireAttribution" jdbcType="TINYINT"/>
+        <result property="traceCount" column="traceCount" jdbcType="BIGINT"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,pictureId,userId,
+        copyrightCode,copyrightOwner,copyrightDesc,
+        allowCommercial,requireAttribution,traceCount,
+        createTime,updateTime,isDelete
+    </sql>
+</mapper>

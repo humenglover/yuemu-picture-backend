@@ -40,5 +40,46 @@ public class PictureUploadRequest implements Serializable {
      * 空间 id
      */
     private Long spaceId;
+
+    /**
+     * 简介
+     */
+    private String introduction;
+
+    /**
+     * 缩略图URL（可选，用于AI上传时直接传递）
+     */
+    private String thumbnailUrl;
+
+    /**
+     * 图片大小（可选，用于AI上传时直接传递）
+     */
+    private Long picSize;
+
+    /**
+     * 图片宽度（可选，用于AI上传时直接传递）
+     */
+    private Integer picWidth;
+
+    /**
+     * 图片高度（可选，用于AI上传时直接传递）
+     */
+    private Integer picHeight;
+
+    /**
+     * 图片比例（可选，用于AI上传时直接传递）
+     */
+    private Double picScale;
+
+    /**
+     * 图片格式（可选，用于AI上传时直接传递）
+     */
+    private String picFormat;
+
+    /**
+     * 图片主色调（可选，用于AI上传时直接传递）
+     */
+    private String picColor;
+
     private static final long serialVersionUID = 1L;
 }

@@ -10,37 +10,30 @@ import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
 import com.lumenglover.yuemupicturebackend.api.aliyunai.AliYunAiApi;
 import com.lumenglover.yuemupicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.lumenglover.yuemupicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
-import com.lumenglover.yuemupicturebackend.api.imagesearch.ImageSearchApiFacade;
-import com.lumenglover.yuemupicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.DeleteRequest;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
 import com.lumenglover.yuemupicturebackend.constant.CrawlerConstant;
-import com.lumenglover.yuemupicturebackend.constant.RedisConstant;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
-import com.lumenglover.yuemupicturebackend.model.dto.es.EsPictureDao;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
-import com.lumenglover.yuemupicturebackend.manager.auth.SpaceUserAuthManager;
-import com.lumenglover.yuemupicturebackend.manager.auth.StpKit;
+import com.lumenglover.yuemupicturebackend.manager.RecommendationManager;
 import com.lumenglover.yuemupicturebackend.manager.auth.annotation.SaSpaceCheckPermission;
 import com.lumenglover.yuemupicturebackend.manager.auth.model.SpaceUserPermissionConstant;
 import com.lumenglover.yuemupicturebackend.model.dto.picture.*;
+import com.lumenglover.yuemupicturebackend.model.dto.picture.UpdatePictureDraftRequest;
+import com.lumenglover.yuemupicturebackend.model.dto.picture.PicturePermissionRequest;
+import com.lumenglover.yuemupicturebackend.model.dto.picture.CopyPictureRequest;
 import com.lumenglover.yuemupicturebackend.model.entity.Picture;
-import com.lumenglover.yuemupicturebackend.model.entity.Space;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
-import com.lumenglover.yuemupicturebackend.model.entity.es.EsPicture;
-import com.lumenglover.yuemupicturebackend.model.enums.PictureReviewStatusEnum;
 import com.lumenglover.yuemupicturebackend.model.vo.PictureTagCategory;
 import com.lumenglover.yuemupicturebackend.model.vo.PictureVO;
 import com.lumenglover.yuemupicturebackend.service.*;
+import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import com.lumenglover.yuemupicturebackend.config.RagConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -69,36 +62,27 @@ public class PictureController {
     private CategoryService categoryService;
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
-
-    @Resource
-    private SpaceService spaceService;
-
-    @Resource
     private AliYunAiApi aliYunAiApi;
 
     @Resource
-    private SpaceUserAuthManager spaceUserAuthManager;
+    private RecommendationManager recommendationManager;
 
     @Resource
-    private EsPictureDao esPictureDao;
+    private AiTokenRecordService aiTokenRecordService;
 
-    /**
-     * 本地缓存
-     */
-    private final Cache<String, String> LOCAL_CACHE = Caffeine.newBuilder()
-            .initialCapacity(1024)
-            .maximumSize(10_000L) // 最大 10000 条
-            // 缓存 5 分钟后移除
-            .expireAfterWrite(Duration.ofMinutes(5))
-            .build();
+    @Resource
+    private RagConfig ragConfig;
+
+    @Resource
+    private PythonRagService pythonRagService;
 
     /**
      * 上传图片（可重新上传）
      */
     @PostMapping("/upload")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
-//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @RateLimiter(key = "picture_upload", time = 60, count = 60, message = "图片上传过于频繁，请稍后再试")
+    // @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<PictureVO> uploadPicture(
             @RequestPart("file") MultipartFile multipartFile,
             PictureUploadRequest pictureUploadRequest,
@@ -109,10 +93,26 @@ public class PictureController {
     }
 
     /**
-     * 通过 URL 上传图片（可重新上传）
+     * 对图片进行 AI 标签识别
+     */
+    @PostMapping("/ai_tag")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
+    @RateLimiter(key = "picture_ai_tag", time = 60, count = 60, message = "AI 标签识别过于频繁，请稍后再试")
+    public BaseResponse<List<String>> aiTag(
+            @RequestPart("file") MultipartFile multipartFile,
+            @RequestParam("pictureId") Long pictureId,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+        List<String> aiLabels = pictureService.aiTag(multipartFile, pictureId);
+        return ResultUtils.success(aiLabels);
+    }
+
+    /**
+     * 通过 URL 上传图片
      */
     @PostMapping("/upload/url")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
+    @RateLimiter(key = "picture_upload_url", time = 60, count = 60, message = "URL图片上传过于频繁，请稍后再试")
     public BaseResponse<PictureVO> uploadPictureByUrl(
             @RequestBody PictureUploadRequest pictureUploadRequest,
             HttpServletRequest request) {
@@ -122,10 +122,24 @@ public class PictureController {
         return ResultUtils.success(pictureVO);
     }
 
+    /**
+     * 直接保存图片 URL（不下载）
+     */
+    @PostMapping("/save/url")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
+    @RateLimiter(key = "picture_save_url", time = 60, count = 60, message = "URL图片保存过于频繁，请稍后再试")
+    public BaseResponse<PictureVO> savePictureByUrl(
+            @RequestBody PictureUploadRequest pictureUploadRequest,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        PictureVO pictureVO = pictureService.savePictureByUrl(pictureUploadRequest, loginUser);
+        return ResultUtils.success(pictureVO);
+    }
+
     @PostMapping("/delete")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_DELETE)
-    public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest
-            , HttpServletRequest request) {
+    @RateLimiter(key = "picture_delete", time = 60, count = 60, message = "图片删除过于频繁，请稍后再试")
+    public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -140,72 +154,8 @@ public class PictureController {
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @Transactional(rollbackFor = Exception.class)
-    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest,
-                                               HttpServletRequest request) {
-        if (pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        // 将实体类和 DTO 进行转换
-        Picture picture = new Picture();
-        BeanUtils.copyProperties(pictureUpdateRequest, picture);
-        // 注意将 list 转为 string
-        picture.setTags(JSONUtil.toJsonStr(pictureUpdateRequest.getTags()));
-        // 数据校验
-        pictureService.validPicture(picture);
-        // 判断是否存在
-        long id = pictureUpdateRequest.getId();
-        Picture oldPicture = pictureService.getById(id);
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-
-        // 保留原有数据中的一些字段
-        picture.setUrl(oldPicture.getUrl());
-        picture.setThumbnailUrl(oldPicture.getThumbnailUrl());
-        picture.setPicSize(oldPicture.getPicSize());
-        picture.setPicWidth(oldPicture.getPicWidth());
-        picture.setPicHeight(oldPicture.getPicHeight());
-        picture.setPicScale(oldPicture.getPicScale());
-        picture.setPicFormat(oldPicture.getPicFormat());
-        picture.setPicColor(oldPicture.getPicColor());
-        picture.setUserId(oldPicture.getUserId());
-        picture.setSpaceId(oldPicture.getSpaceId());
-        picture.setCreateTime(oldPicture.getCreateTime());
-
-        // 补充审核参数
-        User loginUser = userService.getLoginUser(request);
-        pictureService.fillReviewParams(oldPicture, loginUser);
-        // 操作数据库
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-
-        // 同步更新 ES 数据
-        try {
-            // 先查询 ES 中是否存在该数据
-            Optional<EsPicture> esOptional = esPictureDao.findById(id);
-            EsPicture esPicture;
-            if (esOptional.isPresent()) {
-                // 如果存在，获取现有数据
-                esPicture = esOptional.get();
-                // 只更新需要修改的字段
-                esPicture.setName(picture.getName());
-                esPicture.setIntroduction(picture.getIntroduction());
-                esPicture.setCategory(picture.getCategory());
-                esPicture.setTags(picture.getTags());
-                esPicture.setEditTime(picture.getEditTime());
-                esPicture.setReviewStatus(picture.getReviewStatus());
-                esPicture.setReviewMessage(picture.getReviewMessage());
-            } else {
-                // 如果不存在，创建新的 ES 文档
-                esPicture = new EsPicture();
-                BeanUtils.copyProperties(picture, esPicture);
-            }
-            // 保存或更新到 ES
-            esPictureDao.save(esPicture);
-        } catch (Exception e) {
-            log.error("Failed to sync picture to ES during update, pictureId: {}", picture.getId(), e);
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "同步 ES 数据失败");
-        }
-
-        return ResultUtils.success(true);
+    public BaseResponse<Boolean> updatePicture(@RequestBody Picture picture) {
+        return ResultUtils.success(pictureService.updatePicture(picture));
     }
 
     /**
@@ -228,15 +178,17 @@ public class PictureController {
     @PostMapping("/batchOption")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> batchOperationPicture(@RequestBody PictureOperation pictureOperation,
-                                                    HttpServletRequest request) {
+                                                       HttpServletRequest request) {
         // 参数校验
-        ThrowUtils.throwIf(pictureOperation == null || pictureOperation.getIds() == null || pictureOperation.getIds().isEmpty(), ErrorCode.PARAMS_ERROR);
-        //判断是否登录
+        ThrowUtils.throwIf(
+                pictureOperation == null || pictureOperation.getIds() == null || pictureOperation.getIds().isEmpty(),
+                ErrorCode.PARAMS_ERROR);
+        // 判断是否登录
         User loginUser = userService.getLoginUser(request);
         ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR);
-        //调用service方法
+        // 调用service方法
         boolean result = pictureService.batchOperationPicture(pictureOperation);
-        //返回结果
+        // 返回结果
         return ResultUtils.success(true);
     }
 
@@ -244,32 +196,10 @@ public class PictureController {
      * 根据 id 获取图片（封装类）
      */
     @GetMapping("/get/vo")
+    @RateLimiter(key = "picture_get_vo", time = 60, count = 60, message = "图片详情查询过于频繁，请稍后再试")
     public BaseResponse<PictureVO> getPictureVOById(long id, HttpServletRequest request) {
-        ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
-        // 查询数据库
-        Picture picture = pictureService.getById(id);
-        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
-        // 空间权限校验
-        Long spaceId = picture.getSpaceId();
-        Space space = null;
-        if (spaceId != null) {
-            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
-            ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
-            // 已经改为使用注解鉴权
-            // User loginUser = userService.getLoginUser(request);
-            // pictureService.checkPictureAuth(loginUser, picture);
-            space = spaceService.getById(spaceId);
-            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-        }
-        // 获取权限列表
-        User loginUser = userService.getLoginUser(request);
-        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
-        PictureVO pictureVO = pictureService.getPictureVO(picture, request);
-        pictureVO.setPermissionList(permissionList);
-        // 获取封装类
-        return ResultUtils.success(pictureVO);
+        return ResultUtils.success(pictureService.getPictureVOById(id, request));
     }
-
 
     /**
      * 分页获取图片列表（仅管理员可用）
@@ -289,103 +219,46 @@ public class PictureController {
      * 分页获取图片列表（封装类，有缓存）
      */
     @PostMapping("/list/page/vo/cache")
-    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
-                                                                      HttpServletRequest request) {
-        long current = pictureQueryRequest.getCurrent();
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(
+            @RequestBody PictureQueryRequest pictureQueryRequest,
+            HttpServletRequest request) {
+
+        // 用户权限校验
+        User loginUser = userService.isLogin(request);
+        if (loginUser != null) {
+            String userRole = loginUser.getUserRole();
+            ThrowUtils.throwIf(userRole.equals(CrawlerConstant.BAN_ROLE),
+                    ErrorCode.NO_AUTH_ERROR, "封禁用户禁止获取数据,请联系管理员");
+        }
+
+        // 1. 参数校验
         long size = pictureQueryRequest.getPageSize();
-        Long spaceId = pictureQueryRequest.getSpaceId();
-        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser != null ) {
-            String userRole = currentUser.getUserRole();
-            //封禁用户禁止获取数据
-            ThrowUtils.throwIf(userRole.equals(CrawlerConstant.BAN_ROLE), ErrorCode.NO_AUTH_ERROR,"封禁用户禁止获取数据,请联系管理员");
-        }
+        ThrowUtils.throwIf(size > 50, ErrorCode.PARAMS_ERROR, "每页最多显示50条");
 
-        // 限制爬虫
-        ThrowUtils.throwIf(size > 50, ErrorCode.PARAMS_ERROR);
-        pictureService.crawlerDetect(request);
-        // 普通用户默认只能看到审核通过的数据
-        // 空间权限校验
-
-        if (spaceId == null ){
-            // 公开图库
-            // 普通用户默认只能看到审核通过的数据
-            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
-            pictureQueryRequest.setNullSpaceId(true);
-        }
-        // 查询缓存，缓存中没有，再查询数据库
-        // 构建缓存的 key
-        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
-        String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
-        String cacheKey = String.format(RedisConstant.PUBLIC_PIC_REDIS_KEY_PREFIX+"%s", hashKey);
-        // 1. 先从本地缓存中查询
-        String cachedValue = LOCAL_CACHE.getIfPresent(cacheKey);
-        if (cachedValue!= null) {
-            // 如果缓存命中，返回结果
-            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
-            return ResultUtils.success(cachedPage);
-        }
-        // 2. 本地缓存未命中，查询 Redis 分布式缓存
-        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
-        cachedValue = opsForValue.get(cacheKey);
-        if (cachedValue != null) {
-            // 如果缓存命中，更新本地缓存，返回结果
-            LOCAL_CACHE.put(cacheKey, cachedValue);
-            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
-            return ResultUtils.success(cachedPage);
-        }
-        // 3. 查询数据库
-        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
-                pictureService.getQueryWrapper(pictureQueryRequest));
-        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
-        // 4. 更新缓存
-        // 更新 Redis 缓存
-        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
-        // 设置缓存的过期时间，5 - 10 分钟过期，防止缓存雪崩
-        int cacheExpireTime = 300 + RandomUtil.randomInt(0, 300);
-        opsForValue.set(cacheKey, cacheValue, cacheExpireTime, TimeUnit.SECONDS);
-        // 写入本地缓存
-        LOCAL_CACHE.put(cacheKey, cacheValue);
-        // 获取封装类
-        return ResultUtils.success(pictureVOPage);
+        return ResultUtils.success(pictureService.listPictureVOByPageWithCache(pictureQueryRequest, request));
     }
 
     /**
      * 分页获取图片列表（封装类）
      */
     @PostMapping("/list/page/vo")
+    @RateLimiter(key = "picture_list_vo", time = 60, count = 60, message = "图片列表查询过于频繁，请稍后再试")
     public BaseResponse<Page<PictureVO>> listPictureVOByPage(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                              HttpServletRequest request) {
-        long current = pictureQueryRequest.getCurrent();
+        // 用户权限校验
+        User loginUser = userService.isLogin(request);
+        if (loginUser != null) {
+            String userRole = loginUser.getUserRole();
+            ThrowUtils.throwIf(userRole.equals(CrawlerConstant.BAN_ROLE),
+                    ErrorCode.NO_AUTH_ERROR, "封禁用户禁止获取数据,请联系管理员");
+        }
+
+        // 1. 参数校验
         long size = pictureQueryRequest.getPageSize();
-        // 限制爬虫
-        ThrowUtils.throwIf(size > 50, ErrorCode.PARAMS_ERROR);
-        // 空间权限校验
-        Long spaceId = pictureQueryRequest.getSpaceId();
-        Long userId = pictureQueryRequest.getUserId();
-        if (spaceId == null && userId==null){
-            // 公开图库
-            // 普通用户默认只能看到审核通过的数据
-            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
-            pictureQueryRequest.setNullSpaceId(true);
-        }
-        if (spaceId == null && userId !=null) {
-            // 用户发布的图片
-            User loginUser = userService.getLoginUser(request);
-            ThrowUtils.throwIf(!loginUser.getId().equals(userId), ErrorCode.NO_AUTH_ERROR, "没有权限");
-            pictureQueryRequest.setUserId(userId);
-            pictureQueryRequest.setNullSpaceId(true);
-        }
-        if (spaceId != null && userId == null){
-            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
-            ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
-        }
-        // 查询数据库
-        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
-                pictureService.getQueryWrapper(pictureQueryRequest));
-        // 获取封装类
-        return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
+        ThrowUtils.throwIf(size > 50, ErrorCode.PARAMS_ERROR, "每页最多显示50条");
+
+        // 3. 执行查询并返回结果
+        return ResultUtils.success(pictureService.listPictureVOByPage(pictureQueryRequest, request));
     }
 
     /**
@@ -394,7 +267,8 @@ public class PictureController {
     @PostMapping("/edit")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
     @Transactional(rollbackFor = Exception.class)
-    public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
+    public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest,
+                                             HttpServletRequest request) {
         if (pictureEditRequest == null || pictureEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -404,16 +278,10 @@ public class PictureController {
     }
 
     @GetMapping("/tag_category")
-    public BaseResponse<PictureTagCategory> listPictureTagCategory() {
-        PictureTagCategory pictureTagCategory = new PictureTagCategory();
-        List<String> tagList = null;
-        //从数据库查询标签
-        tagList = tagService.listTag();
-        List<String> categoryList = null;
-        //从数据库查询分类
-        categoryList = categoryService.listCategory();
-        pictureTagCategory.setTagList(tagList);
-        pictureTagCategory.setCategoryList(categoryList);
+    @RateLimiter(key = "picture_tag_category", time = 60, count = 120, message = "标签分类查询过于频繁，请稍后再试")
+    public BaseResponse<PictureTagCategory> listPictureTagCategory(HttpServletRequest request) {
+        User loginUser = userService.isLogin(request);
+        PictureTagCategory pictureTagCategory = pictureService.listPictureTagCategory(loginUser);
         return ResultUtils.success(pictureTagCategory);
     }
 
@@ -431,30 +299,46 @@ public class PictureController {
     }
 
     /**
-     * 批量抓取并创建图片
+     * 批量抓取并创建图片（异步 Fire-and-Forget，立即返回 taskId，进度通过 WebSocket 推送）
+     * 解决生产环境 Cloudflare 524 超时问题
      */
     @PostMapping("/upload/batch")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Integer> uploadPictureByBatch(@RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
-                                                      HttpServletRequest request) {
+    public BaseResponse<String> uploadPictureByBatch(
+            @RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
+            HttpServletRequest request) {
         ThrowUtils.throwIf(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(
+                pictureUploadByBatchRequest.getCount() != null && pictureUploadByBatchRequest.getCount() > 15,
+                ErrorCode.PARAMS_ERROR, "最多 15 条");
         User loginUser = userService.getLoginUser(request);
-        int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
-        return ResultUtils.success(uploadCount);
+        // 生成唯一任务ID
+        String taskId = java.util.UUID.randomUUID().toString();
+        // 🔥 异步执行：立即返回，任务在后台线程中运行，进度通过 WebSocket 推送
+        pictureService.uploadPictureByBatchAsync(pictureUploadByBatchRequest, loginUser, taskId);
+        return ResultUtils.success(taskId);
     }
 
     /**
      * 以图搜图
      */
     @PostMapping("/search/picture")
-    public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+    @RateLimiter(key = "picture_search_by_picture", time = 60, count = 10, message = "以图搜图过于频繁，请稍后再试")
+    public BaseResponse<Page<PictureVO>> searchPictureByPicture(
+            @RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest,
+            HttpServletRequest request) {
         ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
-        Long pictureId = searchPictureByPictureRequest.getPictureId();
-        ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
-        Picture picture = pictureService.getById(pictureId);
-        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
-        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getThumbnailUrl());
-        return ResultUtils.success(resultList);
+
+        // 校验并扣减每周以图搜图额度
+        User loginUser = userService.getLoginUser(request);
+        boolean hasQuota = aiTokenRecordService.checkAndDeductImageSearchQuota(loginUser.getId());
+        if (!hasQuota) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "本周以图搜图额度已耗尽");
+        }
+
+        // 调用基于 Qdrant 的以图搜图服务
+        Page<PictureVO> pictureVOPage = pictureService.searchPictureByPicture(searchPictureByPictureRequest, request);
+        return ResultUtils.success(pictureVOPage);
     }
 
     /**
@@ -462,7 +346,9 @@ public class PictureController {
      */
     @PostMapping("/search/color")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_VIEW)
-    public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPictureByColorRequest searchPictureByColorRequest, HttpServletRequest request) {
+    @RateLimiter(key = "picture_search_by_color", time = 60, count = 15, message = "按颜色搜索过于频繁，请稍后再试")
+    public BaseResponse<List<PictureVO>> searchPictureByColor(
+            @RequestBody SearchPictureByColorRequest searchPictureByColorRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
         String picColor = searchPictureByColorRequest.getPicColor();
         Long spaceId = searchPictureByColorRequest.getSpaceId();
@@ -472,11 +358,35 @@ public class PictureController {
     }
 
     /**
+     * 语义搜索（以文搜图）
+     */
+    @PostMapping("/search/semantic")
+    @RateLimiter(key = "picture_search_semantic", time = 60, count = 20, message = "语义搜索过于频繁，请稍后再试")
+    public BaseResponse<Page<PictureVO>> searchPictureBySemantic(
+            @RequestBody SearchPictureBySemanticRequest searchPictureBySemanticRequest,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(searchPictureBySemanticRequest == null, ErrorCode.PARAMS_ERROR);
+        String searchText = searchPictureBySemanticRequest.getSearchText();
+        ThrowUtils.throwIf(StrUtil.isBlank(searchText), ErrorCode.PARAMS_ERROR, "搜索词不能为空");
+
+        // 校验并扣减每周以图搜图额度（共用额度）
+        User loginUser = userService.getLoginUser(request);
+        boolean hasQuota = aiTokenRecordService.checkAndDeductImageSearchQuota(loginUser.getId());
+        if (!hasQuota) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "本周以图搜图额度已耗尽");
+        }
+
+        Page<PictureVO> pictureVOPage = pictureService.searchPictureBySemantic(searchPictureBySemanticRequest, request);
+        return ResultUtils.success(pictureVOPage);
+    }
+
+    /**
      * 批量编辑图片
      */
     @PostMapping("/edit/batch")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
-    public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
+    public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest,
+                                                    HttpServletRequest request) {
         ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
@@ -488,13 +398,15 @@ public class PictureController {
      */
     @PostMapping("/out_painting/create_task")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
-    public BaseResponse<CreateOutPaintingTaskResponse> createPictureOutPaintingTask(@RequestBody CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest,
-                                                                                    HttpServletRequest request) {
+    public BaseResponse<CreateOutPaintingTaskResponse> createPictureOutPaintingTask(
+            @RequestBody CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest,
+            HttpServletRequest request) {
         if (createPictureOutPaintingTaskRequest == null || createPictureOutPaintingTaskRequest.getPictureId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
-        CreateOutPaintingTaskResponse response = pictureService.createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
+        CreateOutPaintingTaskResponse response = pictureService
+                .createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
         return ResultUtils.success(response);
     }
 
@@ -515,33 +427,385 @@ public class PictureController {
      * top100 的数据
      */
     @GetMapping("/top100/{id}")
+    @RateLimiter(key = "picture_top100", time = 60, count = 20, message = "Top100图片查询过于频繁，请稍后再试")
     public BaseResponse<List<PictureVO>> getTop100Picture(@PathVariable Long id) {
-        // 构建 Redis 缓存的 key，根据 id 区分不同时间范围的 top100 数据
-        String cacheKey = RedisConstant.TOP_100_PIC_REDIS_KEY_PREFIX + id;
-
-        // 先从 Redis 缓存中获取数据
-        String cachedValue = stringRedisTemplate.opsForValue().get(cacheKey);
-        if (cachedValue!= null) {
-            // 缓存命中，将 JSON 字符串转换为 List<PictureVO>
-            List<PictureVO> pictureVOList = JSONUtil.toList(cachedValue, PictureVO.class);
-            return ResultUtils.success(pictureVOList);
-        }
-
-        // 缓存未命中，调用服务层方法获取数据
-        List<PictureVO> pictureVOList = pictureService.getTop100Picture(id);
-        int cacheExpireTime = (int) (RedisConstant.TOP_100_PIC_REDIS_KEY_EXPIRE_TIME + RandomUtil.randomInt(0, 6000));
-        // 将数据存储到 Redis 缓存中，设置过期时间为一天
-        stringRedisTemplate.opsForValue().set(cacheKey, JSONUtil.toJsonStr(pictureVOList),cacheExpireTime , TimeUnit.SECONDS);
-
-        return ResultUtils.success(pictureVOList);
+        return ResultUtils.success(pictureService.getTop100PictureWithCache(id));
     }
 
     /**
      * 关注列表照片
      */
     @PostMapping("/follow")
+    @RateLimiter(key = "picture_follow", time = 60, count = 25, message = "关注列表图片查询过于频繁，请稍后再试")
     public BaseResponse<Page<PictureVO>> getFollowPicture(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                           HttpServletRequest request) {
         return ResultUtils.success(pictureService.getFollowPicture(request, pictureQueryRequest));
+    }
+
+    /**
+     * 上传帖子图片
+     */
+    @PostMapping("/upload/postimage")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
+    // @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<PictureVO> uploadPostImage(
+            @RequestPart("file") MultipartFile multipartFile,
+            PictureUploadRequest pictureUploadRequest,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        PictureVO pictureVO = pictureService.uploadPostPicture(multipartFile, pictureUploadRequest, loginUser);
+        return ResultUtils.success(pictureVO);
+    }
+
+    /**
+     * 设置图片精选状态
+     */
+    @PostMapping("/feature")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> setPictureFeature(@RequestBody PictureFeatureRequest pictureFeatureRequest,
+                                                   HttpServletRequest request) {
+        if (pictureFeatureRequest == null || pictureFeatureRequest.getId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        boolean result = pictureService.setPictureFeature(pictureFeatureRequest, loginUser);
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 获取精选图片列表
+     */
+    @PostMapping("/feature/list")
+    public BaseResponse<Page<PictureVO>> getFeaturePicture(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                           HttpServletRequest request) {
+        if (pictureQueryRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        // 限制爬虫
+        long size = pictureQueryRequest.getPageSize();
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+
+        Page<PictureVO> picturePage = pictureService.getFeaturePicture(pictureQueryRequest, request);
+        return ResultUtils.success(picturePage);
+    }
+
+    /**
+     * 获取用户的所有草稿图片
+     */
+    @GetMapping("/draft/list")
+    @RateLimiter(key = "picture_draft_list", time = 60, count = 15, message = "草稿图片列表查询过于频繁，请稍后再试")
+    public BaseResponse<List<PictureVO>> listDraftPictures(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        List<Picture> draftPictures = pictureService.getAllDrafts(loginUser.getId());
+        List<PictureVO> draftPictureVOs = draftPictures.stream()
+                .map(PictureVO::objToVo)
+                .collect(java.util.stream.Collectors.toList());
+        return ResultUtils.success(draftPictureVOs);
+    }
+
+    /**
+     * 获取用户的最新草稿图片
+     */
+    @GetMapping("/draft/latest")
+    @RateLimiter(key = "picture_draft_latest", time = 60, count = 10, message = "最新草稿查询过于频繁，请稍后再试")
+    public BaseResponse<PictureVO> getLatestDraft(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        Picture latestDraft = pictureService.getLatestDraft(loginUser.getId());
+        return ResultUtils.success(PictureVO.objToVo(latestDraft));
+    }
+
+    /**
+     * 更新图片草稿状态
+     */
+    @PostMapping("/draft/update")
+    @RateLimiter(key = "picture_draft_update", time = 60, count = 10, message = "草稿状态更新过于频繁，请稍后再试")
+    public BaseResponse<Boolean> updatePictureDraftStatus(
+            @RequestBody UpdatePictureDraftRequest updatePictureDraftRequest,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(updatePictureDraftRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        boolean result = pictureService.updatePictureDraftStatus(updatePictureDraftRequest.getPictureId(),
+                updatePictureDraftRequest.getIsDraft(),
+                loginUser);
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 设置图片权限
+     *
+     * @param permissionRequest 权限设置请求参数
+     * @param request           HTTP请求
+     * @return 操作结果
+     */
+    @PostMapping("/permission/set")
+    public BaseResponse<Boolean> setPicturePermission(@RequestBody PicturePermissionRequest permissionRequest,
+                                                      HttpServletRequest request) {
+        // 校验参数
+        if (permissionRequest == null || permissionRequest.getPictureId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片ID不能为空");
+        }
+
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+
+        // 调用服务层设置权限
+        boolean result = pictureService.setPicturePermission(
+                permissionRequest.getPictureId(),
+                loginUser.getId(),
+                permissionRequest.getAllowCollect(),
+                permissionRequest.getAllowLike(),
+                permissionRequest.getAllowComment(),
+                permissionRequest.getAllowShare());
+
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 获取图片权限（仅管理员可用）
+     *
+     * @param pictureId 图片ID
+     * @param request   HTTP请求
+     * @return 图片权限信息
+     */
+    @GetMapping("/permission/get")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Picture> getPicturePermission(Long pictureId, HttpServletRequest request) {
+        if (pictureId == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片ID不能为空");
+        }
+
+        // 获取图片信息
+        Picture picture = pictureService.getById(pictureId);
+        if (picture == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        }
+
+        return ResultUtils.success(picture);
+    }
+
+    /**
+     * 分页获取用户的所有图片（非草稿、非删除）
+     */
+    @GetMapping("/user/all")
+    public BaseResponse<Page<Picture>> getUserAllPictures(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "20") long size,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        Page<Picture> pictures = pictureService.getUserAllPictures(loginUser.getId(), current, size);
+        return ResultUtils.success(pictures);
+    }
+
+    /**
+     * 分页获取用户在其他空间的图片（非草稿、非删除）
+     *
+     * @param spaceId 要排除的空间ID
+     * @param current 页码
+     * @param size    页面大小
+     * @param request HTTP请求
+     * @return 分页的其他空间的图片列表
+     */
+    @GetMapping("/user/other-spaces")
+    public BaseResponse<Page<Picture>> getUserPicturesFromOtherSpaces(
+            Long spaceId, Long current, Long size,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        Page<Picture> pictures = pictureService.getUserPicturesFromOtherSpaces(loginUser.getId(), spaceId, current,
+                size);
+        return ResultUtils.success(pictures);
+    }
+
+    /**
+     * 从现有图片复制到新空间
+     *
+     * @param copyPictureRequest 复制图片请求参数
+     * @param request            HTTP请求
+     * @return 复制后的图片信息
+     */
+    @PostMapping("/copy")
+    public BaseResponse<PictureVO> copyPictureToNewSpace(@RequestBody CopyPictureRequest copyPictureRequest,
+                                                         HttpServletRequest request) {
+        // 验证参数
+        ThrowUtils.throwIf(copyPictureRequest == null, ErrorCode.PARAMS_ERROR, "请求参数不能为空");
+        ThrowUtils.throwIf(copyPictureRequest.getPictureId() == null, ErrorCode.PARAMS_ERROR, "原图片ID不能为空");
+
+        User loginUser = userService.getLoginUser(request);
+
+        // 复制图片到新空间
+        Picture newPicture = pictureService.copyPictureToNewSpace(
+                copyPictureRequest.getPictureId(),
+                copyPictureRequest.getSpaceId(),
+                loginUser);
+
+        // 转换为VO并返回
+        PictureVO pictureVO = pictureService.getPictureVO(newPicture, request);
+        return ResultUtils.success(pictureVO);
+    }
+
+    /**
+     * 获取推荐图片列表（分页）
+     */
+    @PostMapping("/list/recommend")
+    @RateLimiter(key = "picture_recommend", time = 60, count = 20, message = "推荐列表获取过于频繁，请稍后再试")
+    public BaseResponse<Page<PictureVO>> listPictureVOByRecommend(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                                  HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        return ResultUtils.success(pictureService.listPictureVOByRecommend(current, size, request));
+    }
+
+    /**
+     * 手动更新推荐相似度矩阵（仅管理员）
+     */
+    @PostMapping("/recommend/update_matrix")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> updateSimilarityMatrix() {
+        recommendationManager.updateSimilarityMatrix();
+        return ResultUtils.success(true);
+    }
+
+    /**
+     * AI识图自动写图片标题和简介 - 流式输出
+     */
+    @GetMapping(value = "/ai_generate_image/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    @AuthCheck
+    @RateLimiter(key = "picture_ai_generate_image", time = 60, count = 10, message = "AI识图过于频繁，请稍后再试")
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter aiGenerateImageStream(
+            @RequestParam("imageUrl") String imageUrl,
+            HttpServletRequest request,
+            javax.servlet.http.HttpServletResponse response) {
+
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("Connection", "keep-alive");
+        response.setContentType("text/event-stream");
+        response.setCharacterEncoding("UTF-8");
+
+        User loginUser = userService.getLoginUser(request);
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(
+                180000L); // 3分钟超时
+
+        // 发送 2048 字节的空白字符，解决前端缓冲延迟
+        try {
+            StringBuilder padding = new StringBuilder();
+            for (int i = 0; i < 2048; i++) {
+                padding.append(" ");
+            }
+            emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("padding")
+                    .data(padding.toString()));
+        } catch (Exception e) {
+            emitter.completeWithError(e);
+            return emitter;
+        }
+
+        // 验证 AI Token 额度预检（如果超出直接结束流）
+        try {
+            aiTokenRecordService.checkTokenQuota(loginUser.getId());
+        } catch (BusinessException e) {
+            try {
+                java.util.Map<String, Object> tokenMap = new java.util.HashMap<>();
+                tokenMap.put("text", "系统提示：您的 AI Token 额度已耗尽，请升级会员后再试。");
+                tokenMap.put("isSystem", true);
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                        .name("content_chunk").data(JSONUtil.toJsonStr(tokenMap)));
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("done")
+                        .data("{\"status\": \"生成完毕\"}"));
+            } catch (Exception ignored) {
+            }
+            emitter.complete();
+            return emitter;
+        }
+
+        String saToken = cn.dev33.satoken.stp.StpUtil.getTokenValue();
+
+        // 构造请求体
+        java.util.Map<String, Object> reqBody = new java.util.HashMap<>();
+        reqBody.put("image_url", imageUrl);
+        reqBody.put("sa_token", saToken);
+
+        String endpoint = ragConfig.getPythonService().getBaseUrl()
+                + ragConfig.getPythonService().getAi().getAiPictureStreamEndpoint();
+        log.info("【AI识图写文案】流式请求 Python 端, URL={}, 参数={}", endpoint, reqBody);
+
+        org.springframework.web.reactive.function.client.WebClient webClient = org.springframework.web.reactive.function.client.WebClient
+                .create();
+
+        java.util.concurrent.atomic.AtomicInteger totalConsumeToken = new java.util.concurrent.atomic.AtomicInteger(
+                500); // 基础识图消耗
+
+        reactor.core.publisher.Flux<org.springframework.http.codec.ServerSentEvent<String>> eventStream = webClient
+                .post()
+                .uri(endpoint)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .bodyValue(reqBody)
+                .accept(org.springframework.http.MediaType.TEXT_EVENT_STREAM)
+                .retrieve()
+                .bodyToFlux(
+                        new org.springframework.core.ParameterizedTypeReference<org.springframework.http.codec.ServerSentEvent<String>>() {
+                        });
+
+        reactor.core.Disposable disposable = eventStream.subscribe(
+                event -> {
+                    try {
+                        String eventName = event.event();
+                        String data = event.data();
+                        log.debug("AI识图写文案 SSE 事件：name={}, data={}", eventName, data);
+
+                        if ("content_chunk".equals(eventName) && cn.hutool.core.util.StrUtil.isNotBlank(data)) {
+                            try {
+                                cn.hutool.json.JSONObject dataObj = JSONUtil.parseObj(data);
+                                String text = dataObj.getStr("text");
+                                if (cn.hutool.core.util.StrUtil.isNotBlank(text)) {
+                                    totalConsumeToken.addAndGet(text.length());
+                                }
+                            } catch (Exception ignored) {
+                            }
+                        }
+
+                        // 原样透传给前端
+                        emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                                .name(eventName != null ? eventName : "message")
+                                .data(data != null ? data : ""));
+
+                        if ("done".equals(eventName) || "error".equals(eventName)) {
+                            // 识图成帖基础消耗较高，加上生成的长度
+                            int finalToken = totalConsumeToken.get() + 500;
+                            aiTokenRecordService.recordTokenUsage(loginUser.getId(), finalToken);
+                            emitter.complete();
+                        }
+                    } catch (Exception e) {
+                        log.warn("向前端推送AI识图写文案 SSE 数据失败", e);
+                        emitter.completeWithError(e);
+                    }
+                },
+                error -> {
+                    log.error("AI识图写文案 Python端调用异常", error);
+                    try {
+                        emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                                .name("error").data("{\"error\":\"AI识图服务异常\"}"));
+                    } catch (Exception ignored) {
+                    }
+                    emitter.completeWithError(error);
+                },
+                () -> {
+                    log.info("AI识图写文案 流式输出正常结束");
+                    emitter.complete();
+                });
+
+        emitter.onCompletion(disposable::dispose);
+        emitter.onError((ex) -> disposable.dispose());
+        emitter.onTimeout(() -> {
+            disposable.dispose();
+            emitter.complete();
+        });
+
+        return emitter;
     }
 }

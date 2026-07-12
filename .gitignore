@@ -2,6 +2,12 @@
 src/main/resources/application-test.yml
 src/main/resources/application-prod.yml
 logs/*
+src/main/resources/coze/private_key.pem
+
+# 环境变量文件（包含密码和密钥）
+.env
+.env.*
+!.env.example
 
 HELP.md
 target/
@@ -36,3 +42,4 @@ build/
 
 ### VS Code ###
 .vscode/
+

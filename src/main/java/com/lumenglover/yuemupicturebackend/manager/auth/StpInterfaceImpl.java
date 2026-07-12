@@ -33,11 +33,12 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
 import static com.lumenglover.yuemupicturebackend.constant.UserConstant.USER_LOGIN_STATE;
+import static com.lumenglover.yuemupicturebackend.constant.CrawlerConstant.BAN_ROLE;
 
 /**
  * 自定义权限加载接口实现类
  */
-@Component    // 保证此类被 SpringBoot 扫描，完成 Sa-Token 的自定义权限验证扩展
+@Component
 public class StpInterfaceImpl implements StpInterface {
 
     // 默认是 /api
@@ -68,8 +69,21 @@ public class StpInterfaceImpl implements StpInterface {
         if (!StpKit.SPACE_TYPE.equals(loginType)) {
             return new ArrayList<>();
         }
+
+        // 获取当前登录用户
+        User loginUser = (User) StpKit.SPACE.getSessionByLoginId(loginId).get(USER_LOGIN_STATE);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "用户未登录");
+        }
+
+        // 检查用户是否被封禁
+        if (BAN_ROLE.equals(loginUser.getUserRole())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "封禁用户禁止访问,请联系管理员");
+        }
+
         // 管理员权限，表示权限校验通过
         List<String> ADMIN_PERMISSIONS = spaceUserAuthManager.getPermissionsByRole(SpaceRoleEnum.ADMIN.getValue());
+
         // 获取上下文对象
         SpaceUserAuthContext authContext = getAuthContextByRequest();
         // 如果所有字段都为空，表示查询公共图库，可以通过
@@ -77,10 +91,6 @@ public class StpInterfaceImpl implements StpInterface {
             return ADMIN_PERMISSIONS;
         }
         // 获取 userId
-        User loginUser = (User) StpKit.SPACE.getSessionByLoginId(loginId).get(USER_LOGIN_STATE);
-        if (loginUser == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "用户未登录");
-        }
         Long userId = loginUser.getId();
         // 优先从上下文中获取 SpaceUser 对象
         SpaceUser spaceUser = authContext.getSpaceUser();
@@ -107,6 +117,10 @@ public class StpInterfaceImpl implements StpInterface {
         }
         // 如果没有 spaceUserId，尝试通过 spaceId 或 pictureId 获取 Space 对象并处理
         Long spaceId = authContext.getSpaceId();
+        // 如果 spaceId 为 0，视为公共图库 (兼容 AI 或前端传 0 的情况)
+        if (spaceId != null && spaceId <= 0) {
+            spaceId = null;
+        }
         if (spaceId == null) {
             // 如果没有 spaceId，通过 pictureId 获取 Picture 对象和 Space 对象
             Long pictureId = authContext.getPictureId();

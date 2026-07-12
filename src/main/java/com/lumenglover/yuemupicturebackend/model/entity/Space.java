@@ -1,6 +1,7 @@
 package com.lumenglover.yuemupicturebackend.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.lumenglover.yuemupicturebackend.utils.VoUrlReplaceUtil;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -63,6 +64,7 @@ public class Space implements Serializable {
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
@@ -73,7 +75,24 @@ public class Space implements Serializable {
     /**
      * 更新时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
+
+    /**
+     * 空间简介
+     */
+    private String spaceDesc;
+
+    /**
+     * 空间封面图
+     */
+    private String spaceCover;
+
+
+    /**
+     * 是否推荐 0-否 1-是
+     */
+    private Integer isRecommended;
 
     /**
      * 是否删除
@@ -81,6 +100,23 @@ public class Space implements Serializable {
     @TableLogic
     private Integer isDelete;
 
+    /**
+     * 空间最大存储限额，单位MB
+     */
+    private Integer maxStorage;
+
+    /**
+     * 空间已使用容量，单位MB
+     */
+    private Integer usedStorage;
+
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 替换URL为自定义域名
+     */
+    public void replaceUrlWithCustomDomain() {
+        this.spaceCover = VoUrlReplaceUtil.replaceUrl(this.spaceCover);
+    }
 }

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lumenglover.yuemupicturebackend.mapper.GameRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.GameRecord">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="userId" column="userId" jdbcType="BIGINT"/>
+        <result property="gameType" column="gameType" jdbcType="VARCHAR"/>
+        <result property="gameName" column="gameName" jdbcType="VARCHAR"/>
+        <result property="level" column="level" jdbcType="VARCHAR"/>
+        <result property="score" column="score" jdbcType="INTEGER"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,userId,gameType,gameName,
+        level,score,createTime,updateTime,
+        isDelete
+    </sql>
+
+    <!-- 高性能且严格兼容 ONLY_FULL_GROUP_BY 的排行榜 SQL 设计 -->
+    <!-- 内层 temp：提取每个用户在特定级别下的最高评分 -->
+    <!-- 中层 g2：根据最高评分定位唯一的记录 ID（通过 MIN(id) 选取该最高分下的最早达成记录，避免单用户多峰值冗余） -->
+    <!-- 外层 g1：通过主键 ID 连接，无需在外层执行任何非聚合 GROUP BY，完美避开 ONLY_FULL_GROUP_BY 异常 -->
+    <select id="selectLeaderboardPage" resultMap="BaseResultMap">
+        SELECT g1.id, g1.userId, g1.gameType, g1.gameName, g1.level, g1.score, g1.createTime, g1.updateTime, g1.isDelete
+        FROM game_record g1
+        INNER JOIN (
+        SELECT MIN(g.id) AS id
+        FROM game_record g
+        INNER JOIN (
+        SELECT userId, MAX(score) AS max_score
+        FROM game_record
+        WHERE gameType = #{gameType}
+        <if test="level != null and level != ''">
+            AND level = #{level}
+        </if>
+        AND isDelete = 0
+        GROUP BY userId
+        ) temp ON g.userId = temp.userId AND g.score = temp.max_score
+        WHERE g.gameType = #{gameType}
+        <if test="level != null and level != ''">
+            AND g.level = #{level}
+        </if>
+        AND g.isDelete = 0
+        GROUP BY g.userId
+        ) g2 ON g1.id = g2.id
+        ORDER BY g1.score DESC, g1.createTime ASC
+    </select>
+
+</mapper>

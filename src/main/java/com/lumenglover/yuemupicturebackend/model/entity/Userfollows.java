@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Data;
@@ -50,6 +51,7 @@ public class Userfollows implements Serializable {
     /**
      * 关注关系创建时间，默认为当前时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
@@ -60,6 +62,7 @@ public class Userfollows implements Serializable {
     /**
      * 关注关系更新时间，更新时自动更新
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
     /**

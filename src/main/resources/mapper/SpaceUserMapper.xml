@@ -5,16 +5,18 @@
 <mapper namespace="com.lumenglover.yuemupicturebackend.mapper.SpaceUserMapper">
 
     <resultMap id="BaseResultMap" type="com.lumenglover.yuemupicturebackend.model.entity.SpaceUser">
-            <id property="id" column="id" jdbcType="BIGINT"/>
-            <result property="spaceId" column="spaceId" jdbcType="BIGINT"/>
-            <result property="userId" column="userId" jdbcType="BIGINT"/>
-            <result property="spaceRole" column="spaceRole" jdbcType="VARCHAR"/>
-            <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
-            <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="spaceId" column="spaceId" jdbcType="BIGINT"/>
+        <result property="userId" column="userId" jdbcType="BIGINT"/>
+        <result property="spaceRole" column="spaceRole" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="isRecommended" column="isRecommended" jdbcType="TINYINT"/>
+        <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,spaceId,userId,
-        spaceRole,createTime,updateTime
+        spaceRole,status,isRecommended,createTime,updateTime
     </sql>
 </mapper>

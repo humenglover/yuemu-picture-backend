@@ -13,7 +13,7 @@ import java.io.Serializable;
 public class CreateOutPaintingTaskRequest implements Serializable {
 
     /**
-     * 模型，例如 "image-out-painting"
+     * 模型
      */
     private String model = "image-out-painting";
 

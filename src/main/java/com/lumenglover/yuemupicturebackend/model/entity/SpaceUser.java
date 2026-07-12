@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Data;
@@ -37,13 +38,25 @@ public class SpaceUser implements Serializable {
     private String spaceRole;
 
     /**
+     * 审核状态：0-待审核 1-已通过 2-已拒绝
+     */
+    private Integer status;
+
+    /**
+     * 是否为推荐成员：0-否 1-是
+     */
+    private Integer isRecommended;
+
+    /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private Date createTime;
 
     /**
      * 更新时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
     @TableField(exist = false)
