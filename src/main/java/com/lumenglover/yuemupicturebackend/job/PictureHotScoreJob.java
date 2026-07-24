@@ -186,62 +186,9 @@ public class PictureHotScoreJob implements CommandLineRunner {
         // 获取总图片数量
         long totalPictures = pictureService.countPictureScoreData();
         log.info("总共需要处理 {} 张图片", totalPictures);
-
-        // 如果图片数量较多，启用分片处理
-        if (totalPictures > 10000) {  // 如果超过1万张图片，使用分片处理
-            calculateHotScoresWithSharding(totalPictures);
-        } else {
-            calculateHotScoresWithoutSharding();
-        }
+        calculateHotScoresWithoutSharding();
     }
 
-    /**
-     * 使用分片的方式计算热榜分数
-     * 按图片ID范围分片，可以并行处理
-     */
-    private void calculateHotScoresWithSharding(long totalPictures) {
-        log.info("图片数量较多({})，启用分片处理模式", totalPictures);
-
-        // 计算分片数量，每个分片处理约5000张图片
-        int shardSize = 5000;
-        long minId = 0;
-        long maxId = getMaxPictureId();
-
-        log.info("开始按ID范围分片处理，最大ID: {}", maxId);
-
-        long totalProcessed = 0;
-
-        while (minId <= maxId) {
-            // 计算当前分片的最大ID
-            long currentMaxId = Math.min(minId + shardSize, maxId);
-
-            log.info("处理分片: ID范围 [{} - {}]", minId, currentMaxId);
-
-            // 处理当前分片
-            long processedInShard = processShard(minId, currentMaxId);
-            totalProcessed += processedInShard;
-
-            log.info("分片 [{} - {}] 处理完成，本分片处理 {} 张，累计处理 {} 张",
-                    minId, currentMaxId, processedInShard, totalProcessed);
-
-            minId = currentMaxId + 1;  // 移动到下一个分片
-
-            // 为了避免影响数据库性能，在分片之间短暂休眠
-            try {
-                Thread.sleep(100);  // 休眠100毫秒
-            } catch (InterruptedException e) {
-                log.warn("分片处理被中断");
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
-
-        log.info("分片计算完成，共处理 {} 张图片", totalProcessed);
-    }
-
-    /**
-     * 顺序处理不分片的计算
-     */
     private void calculateHotScoresWithoutSharding() {
         log.info("图片数量较少，使用顺序处理模式");
         long totalProcessed = 0;
@@ -296,69 +243,6 @@ public class PictureHotScoreJob implements CommandLineRunner {
 
         // 同步到 Redis
         syncPictureRankingToRedis(allPictureScores);
-    }
-
-    /**
-     * 获取最大的图片ID
-     */
-    private long getMaxPictureId() {
-        try {
-            Long maxId = pictureService.selectMaxPictureId();
-            return maxId != null ? maxId : 0L;
-        } catch (Exception e) {
-            log.warn("获取最大图片ID失败，使用默认值", e);
-            return 0L;
-        }
-    }
-
-    /**
-     * 处理一个分片（ID范围内的图片）
-     */
-    private long processShard(long minId, long maxId) {
-        long totalProcessed = 0;
-        long currentOffset = 0;
-
-        while (true) {
-            // 查询指定ID范围内的图片数据
-            List<PictureHotScoreDto> pictureDtos = pictureService.selectPictureScoreDataInRange(minId, maxId, currentOffset, PAGE_SIZE).stream()
-                    .filter(dto -> {
-                        // 获取完整的图片实体以检查空间、审核状态和草稿状态
-                        Picture picture = pictureService.getById(dto.getId());
-                        return picture != null && picture.getSpaceId() == null &&
-                                picture.getReviewStatus() == 1 && picture.getIsDraft() == 0;
-                    })
-                    .collect(Collectors.toList());
-
-            if (pictureDtos.isEmpty()) {
-                break;
-            }
-
-            // 计算每张图片的热榜分数
-            List<Picture> picturesToUpdate = new ArrayList<>();
-            for (PictureHotScoreDto dto : pictureDtos) {
-                double hotScore = calculateHotScore(dto);
-                Picture picture = new Picture();
-                picture.setId(dto.getId());
-                picture.setHotScore(hotScore);
-                picturesToUpdate.add(picture);
-            }
-
-            // 分批更新热榜分数
-            boolean updateResult = pictureService.updateBatchHotScore(picturesToUpdate);
-            if (!updateResult) {
-                log.error("批量更新热榜分数失败，批次大小: {}", picturesToUpdate.size());
-            }
-
-            totalProcessed += pictureDtos.size();
-
-            if (pictureDtos.size() < PAGE_SIZE) {
-                break;
-            }
-
-            currentOffset += PAGE_SIZE;
-        }
-
-        return totalProcessed;
     }
 
     /**

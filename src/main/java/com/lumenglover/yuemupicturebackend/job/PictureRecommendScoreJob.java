@@ -166,11 +166,7 @@ public class PictureRecommendScoreJob implements CommandLineRunner {
                 log.info("全量校准任务：共需处理{}张图片", totalPictures);
 
                 Instant now = Instant.now();
-                if (totalPictures > 10000) {
-                    calculateRecommendScoresWithParallelSharding(now, totalPictures);
-                } else {
-                    calculateRecommendScoresWithoutSharding(now);
-                }
+                calculateRecommendScoresWithoutSharding(now);
             } else {
                 log.warn("全量任务未获取到锁，跳过本次校准");
             }
@@ -184,32 +180,6 @@ public class PictureRecommendScoreJob implements CommandLineRunner {
                 lock.unlock();
             }
         }
-    }
-
-    private void calculateRecommendScoresWithParallelSharding(Instant now, long totalPictures) {
-        long minId = 0;
-        long maxId = Optional.ofNullable(pictureService.selectMaxPictureId()).orElse(0L);
-        List<CompletableFuture<Long>> futures = new ArrayList<>();
-
-        long currentMinId = minId;
-        while (currentMinId <= maxId) {
-            long batchMinId = currentMinId;
-            long batchMaxId = Math.min(currentMinId + SHARD_SIZE - 1, maxId);
-            CompletableFuture<Long> future = CompletableFuture.supplyAsync(
-                    () -> processRecommendShard(batchMinId, batchMaxId, now), taskExecutor);
-            futures.add(future);
-            currentMinId = batchMaxId + 1;
-        }
-
-        long totalProcessed = 0;
-        for (CompletableFuture<Long> future : futures) {
-            try {
-                totalProcessed += future.get();
-            } catch (Exception e) {
-                log.error("分片处理失败", e);
-            }
-        }
-        log.info("全量并行处理完成：共处理{}张图片", totalProcessed);
     }
 
     private void calculateRecommendScoresWithoutSharding(Instant now) {
@@ -226,22 +196,6 @@ public class PictureRecommendScoreJob implements CommandLineRunner {
             offset += PAGE_SIZE;
         }
         log.info("全量顺序处理完成：共处理{}张图片", totalProcessed);
-    }
-
-    private long processRecommendShard(long minId, long maxId, Instant now) {
-        long totalProcessed = 0;
-        long currentOffset = 0;
-        while (true) {
-            List<PictureHotScoreDto> pictureDtos = pictureService.selectPictureScoreDataInRange(minId, maxId, currentOffset, PAGE_SIZE);
-            if (pictureDtos.isEmpty()) break;
-
-            List<Long> ids = pictureDtos.stream().map(PictureHotScoreDto::getId).collect(Collectors.toList());
-            totalProcessed += processPictureDtoBatch(pictureDtos, pictureService.listByIds(ids), now);
-
-            if (pictureDtos.size() < PAGE_SIZE) break;
-            currentOffset += PAGE_SIZE;
-        }
-        return totalProcessed;
     }
 
     private long processPictureDtoBatch(List<PictureHotScoreDto> pictureDtos, List<Picture> pictures, Instant now) {
