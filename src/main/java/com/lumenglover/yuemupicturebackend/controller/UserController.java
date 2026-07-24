@@ -1,4 +1,5 @@
 package com.lumenglover.yuemupicturebackend.controller;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.bean.BeanUtil;
@@ -349,6 +350,7 @@ public class UserController {
     /**
      * 修改密码
      */
+    @SaCheckLogin
     @PostMapping("/changePassword")
     @RateLimiter(key = "user_change_password", time = 60, count = 5, message = "密码修改过于频繁，请稍后再试")
     public BaseResponse<Boolean> changePassword(@RequestBody UserModifyPassWord userModifyPassWord, HttpServletRequest request) {
@@ -360,6 +362,7 @@ public class UserController {
     /**
      * 用户退出
      */
+    @SaCheckLogin
     @PostMapping("/logout")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
         ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);

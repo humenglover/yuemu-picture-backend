@@ -1,4 +1,5 @@
 package com.lumenglover.yuemupicturebackend.controller;
+import cn.dev33.satoken.annotation.SaCheckRole;
 
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
@@ -30,6 +31,7 @@ public class PexelsCrawlerController {
     /**
      * 手动触发 Pexels 抓取任务
      */
+    @SaCheckRole("admin")
     @PostMapping("/crawl/trigger")
     public BaseResponse<String> triggerCrawl() {
         log.info("🔧 收到手动触发 Pexels 抓取任务请求");
