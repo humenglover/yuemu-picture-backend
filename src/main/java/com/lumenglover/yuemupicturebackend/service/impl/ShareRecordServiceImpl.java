@@ -69,7 +69,7 @@ public class ShareRecordServiceImpl extends ServiceImpl<ShareRecordMapper, Share
 
     @Override
     @Async("asyncExecutor")
-    @Transactional(rollbackFor = Exception.class)
+    // 注意：@Transactional 不能和 @Async 一起用 —— Spring AOP 代理机制下事务上下文在线程切换时丢失
     public CompletableFuture<Boolean> doShare(ShareRequest shareRequest, Long userId) {
         try {
             Long targetId = shareRequest.getTargetId();

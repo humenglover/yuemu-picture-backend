@@ -102,12 +102,12 @@ public class ActivityController {
         if (activityQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.isLogin(request);
 
 
         Page<Activity> activityPage = activityService.listActivities(activityQueryRequest, loginUser);
 
-        // 如果不是管理员，过滤掉过期的活动
+        // 未登录或非管理员，过滤掉过期的活动
         if (loginUser == null || !"admin".equals(loginUser.getUserRole())) {
             List<Activity> filteredRecords = activityPage.getRecords().stream()
                     .filter(activity -> activity.getIsExpired() == null || activity.getIsExpired().equals(0))
@@ -129,11 +129,11 @@ public class ActivityController {
         if (activityQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.isLogin(request);
 
         Page<Activity> activityPage = activityService.listActivitiesBySpaceId(activityQueryRequest, loginUser);
 
-        // 如果不是系统管理员，过滤掉过期的活动
+        // 未登录或非管理员，过滤掉过期的活动
         if (loginUser == null || !userService.isAdmin(loginUser)) {
             List<Activity> filteredRecords = activityPage.getRecords().stream()
                     .filter(activity -> activity.getIsExpired() == null || activity.getIsExpired().equals(0))

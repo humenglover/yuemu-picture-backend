@@ -57,22 +57,26 @@ public class TextModerationManager {
                     .timeout(15000) // 增加超时时间到 15s 以适配低内存环境
                     .execute();
 
-            if (response.isOk()) {
-                JSONObject resJson = JSONUtil.parseObj(response.body());
-                JSONObject results = resJson.getJSONObject("results");
-                if (results != null && results.containsKey(text)) {
-                    JSONObject result = results.getJSONObject(text);
-                    Integer label = result.getInt("label");
-                    if (label != null && label == 1) {
-                        String filteredText = result.getStr("filtered_text");
-                        if (filteredText != null) {
-                            log.warn("文本审核不通过，包含违规词，已自动替换: {}", text);
-                            return filteredText;
+            try {
+                if (response.isOk()) {
+                    JSONObject resJson = JSONUtil.parseObj(response.body());
+                    JSONObject results = resJson.getJSONObject("results");
+                    if (results != null && results.containsKey(text)) {
+                        JSONObject result = results.getJSONObject(text);
+                        Integer label = result.getInt("label");
+                        if (label != null && label == 1) {
+                            String filteredText = result.getStr("filtered_text");
+                            if (filteredText != null) {
+                                log.warn("文本审核不通过，包含违规词，已自动替换: {}", text);
+                                return filteredText;
+                            }
                         }
                     }
+                } else {
+                    log.error("文本审核调用失败, status: {}, body: {}", response.getStatus(), response.body());
                 }
-            } else {
-                log.error("文本审核调用失败, status: {}, body: {}", response.getStatus(), response.body());
+            } finally {
+                response.close();
             }
         } catch (Exception e) {
             log.error("文本审核服务调用异常", e);
@@ -114,22 +118,26 @@ public class TextModerationManager {
                         .timeout(10000) // 10秒超时足够
                         .execute();
 
-                if (response.isOk()) {
-                    JSONObject resJson = JSONUtil.parseObj(response.body());
-                    JSONObject results = resJson.getJSONObject("results");
-                    if (results != null && results.containsKey(text)) {
-                        JSONObject result = results.getJSONObject(text);
-                        Integer label = result.getInt("label");
-                        if (label != null && label == 1) {
-                            String filteredText = result.getStr("filtered_text");
-                            log.warn("文本审核不通过，包含违规词，已自动替换: {}", text);
-                            if (onViolation != null) {
-                                onViolation.accept(filteredText != null ? filteredText : text);
+                try {
+                    if (response.isOk()) {
+                        JSONObject resJson = JSONUtil.parseObj(response.body());
+                        JSONObject results = resJson.getJSONObject("results");
+                        if (results != null && results.containsKey(text)) {
+                            JSONObject result = results.getJSONObject(text);
+                            Integer label = result.getInt("label");
+                            if (label != null && label == 1) {
+                                String filteredText = result.getStr("filtered_text");
+                                log.warn("文本审核不通过，包含违规词，已自动替换: {}", text);
+                                if (onViolation != null) {
+                                    onViolation.accept(filteredText != null ? filteredText : text);
+                                }
                             }
                         }
+                    } else {
+                        log.error("文本审核调用失败, status: {}, body: {}", response.getStatus(), response.body());
                     }
-                } else {
-                    log.error("文本审核调用失败, status: {}, body: {}", response.getStatus(), response.body());
+                } finally {
+                    response.close();
                 }
             } catch (Exception e) {
                 log.error("文本审核服务调用异常", e);

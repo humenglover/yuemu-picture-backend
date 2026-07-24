@@ -46,7 +46,10 @@ public class CreatorAnalyticsController {
      */
     @GetMapping("/user")
     public BaseResponse<CreatorAnalyticsVO> getUserAnalytics(Long userId, HttpServletRequest request) {
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.isLogin(request);
+        if (loginUser == null) {
+            return (BaseResponse<CreatorAnalyticsVO>) ResultUtils.error(403, "请登录后查看数据");
+        }
 
         // 只能查看自己的数据，除非是管理员
         if (!loginUser.getId().equals(userId) && !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())) {

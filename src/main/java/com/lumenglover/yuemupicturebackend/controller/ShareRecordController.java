@@ -64,8 +64,10 @@ public class ShareRecordController {
             @PathVariable("targetType") Integer targetType,
             @PathVariable("targetId") Long targetId,
             HttpServletRequest request) {
-        User loginUser = userService.getLoginUser(request);
-        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR);
+        User loginUser = userService.isLogin(request);
+        if (loginUser == null) {
+            return ResultUtils.success(false);
+        }
 
         boolean isShared = shareRecordService.isContentShared(targetId, targetType, loginUser.getId());
         return ResultUtils.success(isShared);

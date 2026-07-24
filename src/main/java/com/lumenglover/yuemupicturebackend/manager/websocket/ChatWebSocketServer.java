@@ -98,6 +98,8 @@ public class ChatWebSocketServer extends TextWebSocketHandler {
      */
     private final LinkedBlockingQueue<AIMessageTask> aiMessageQueue;
 
+    private Thread heartbeatThread;
+
     public ChatWebSocketServer() {
         // 创建AI消息处理队列
         this.aiMessageQueue = new LinkedBlockingQueue<>(1000);
@@ -117,9 +119,29 @@ public class ChatWebSocketServer extends TextWebSocketHandler {
         startAIMessageProcessor();
 
         // 启动心跳检查线程
-        Thread heartbeatThread = new Thread(this::checkHeartbeats);
-        heartbeatThread.setDaemon(true);
-        heartbeatThread.start();
+        this.heartbeatThread = new Thread(this::checkHeartbeats);
+        this.heartbeatThread.setDaemon(true);
+        this.heartbeatThread.start();
+    }
+
+    @javax.annotation.PreDestroy
+    public void destroy() {
+        log.info("ChatWebSocketServer 正在关闭...");
+        // 关闭AI消息线程池
+        aiMessageExecutor.shutdown();
+        try {
+            if (!aiMessageExecutor.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                aiMessageExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            aiMessageExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        // 中断心跳线程
+        if (heartbeatThread != null && heartbeatThread.isAlive()) {
+            heartbeatThread.interrupt();
+        }
+        log.info("ChatWebSocketServer 已关闭");
     }
 
     /**

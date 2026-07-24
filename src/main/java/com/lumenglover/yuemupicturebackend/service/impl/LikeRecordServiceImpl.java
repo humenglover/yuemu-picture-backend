@@ -77,7 +77,8 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
 
     @Override
     @Async("asyncExecutor")
-    @Transactional(rollbackFor = Exception.class)
+    // 注意：@Transactional 不能和 @Async 一起用 —— Spring AOP 代理机制下事务上下文在线程切换时丢失
+    // 实际的 DB 写操作通过 self.doLikeInTransaction() 在独立事务中执行
     public CompletableFuture<Boolean> doLike(LikeRequest likeRequest, Long userId) {
         try {
             Long targetId = likeRequest.getTargetId();

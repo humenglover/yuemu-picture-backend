@@ -106,6 +106,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     private com.lumenglover.yuemupicturebackend.config.RagConfig ragConfig;
 
     @Override
+    // TODO: 事务内不能包含HTTP调用（AI审核8秒超时），否则DB连接长时间占用。应拆分：AI审核独立执行，仅DB写入在事务中
     @Transactional(rollbackFor = Exception.class)
     public Long addPost(PostAddRequest postAddRequest, User loginUser) {
         // 参数校验
@@ -354,6 +355,19 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 【修正点1】先获取Post实体，再转VO
         Post postEntity = this.getById(id);
         ThrowUtils.throwIf(postEntity == null, ErrorCode.NOT_FOUND_ERROR);
+
+        // 未登录用户只能查看审核通过且非草稿的公开帖子
+        if (loginUser == null) {
+            boolean isDraft = postEntity.getIsDraft() != null && postEntity.getIsDraft() == 1;
+            boolean isApproved = postEntity.getStatus() != null && postEntity.getStatus() == 1;
+            if (isDraft) {
+                throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "该帖子为草稿，请登录后查看");
+            }
+            if (!isApproved) {
+                throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "该帖子暂未公开，请登录后查看");
+            }
+        }
+
         PostVO post = PostVO.objToVo(postEntity);
 
         // 增加浏览量

@@ -329,11 +329,13 @@ public class PictureController {
             HttpServletRequest request) {
         ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
 
-        // 校验并扣减每周以图搜图额度
-        User loginUser = userService.getLoginUser(request);
-        boolean hasQuota = aiTokenRecordService.checkAndDeductImageSearchQuota(loginUser.getId());
-        if (!hasQuota) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "本周以图搜图额度已耗尽");
+        // 校验并扣减每周以图搜图额度（未登录用户不校验额度）
+        User loginUser = userService.isLogin(request);
+        if (loginUser != null) {
+            boolean hasQuota = aiTokenRecordService.checkAndDeductImageSearchQuota(loginUser.getId());
+            if (!hasQuota) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "本周以图搜图额度已耗尽");
+            }
         }
 
         // 调用基于 Qdrant 的以图搜图服务
@@ -352,7 +354,7 @@ public class PictureController {
         ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
         String picColor = searchPictureByColorRequest.getPicColor();
         Long spaceId = searchPictureByColorRequest.getSpaceId();
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.isLogin(request);
         List<PictureVO> pictureVOList = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
         return ResultUtils.success(pictureVOList);
     }
@@ -369,11 +371,13 @@ public class PictureController {
         String searchText = searchPictureBySemanticRequest.getSearchText();
         ThrowUtils.throwIf(StrUtil.isBlank(searchText), ErrorCode.PARAMS_ERROR, "搜索词不能为空");
 
-        // 校验并扣减每周以图搜图额度（共用额度）
-        User loginUser = userService.getLoginUser(request);
-        boolean hasQuota = aiTokenRecordService.checkAndDeductImageSearchQuota(loginUser.getId());
-        if (!hasQuota) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "本周以图搜图额度已耗尽");
+        // 校验并扣减每周以图搜图额度（未登录用户不校验额度）
+        User loginUser = userService.isLogin(request);
+        if (loginUser != null) {
+            boolean hasQuota = aiTokenRecordService.checkAndDeductImageSearchQuota(loginUser.getId());
+            if (!hasQuota) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "本周以图搜图额度已耗尽");
+            }
         }
 
         Page<PictureVO> pictureVOPage = pictureService.searchPictureBySemantic(searchPictureBySemanticRequest, request);

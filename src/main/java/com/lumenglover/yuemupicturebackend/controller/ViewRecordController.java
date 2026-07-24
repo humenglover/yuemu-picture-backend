@@ -85,7 +85,7 @@ public class ViewRecordController {
     @RateLimiter(key = "view_record_report_duration", time = 60, count = 120, message = "浏览时长上报过于频繁，请稍后再试")
     public BaseResponse<Boolean> reportViewDuration(@RequestBody List<ReportViewDurationRequest> requestList,
                                                     HttpServletRequest httpServletRequest) {
-        User loginUser = userService.getLoginUser(httpServletRequest);
+        User loginUser = userService.isLogin(httpServletRequest);
         Long userId = loginUser != null ? loginUser.getId() : null;
 
         if (requestList == null || requestList.isEmpty()) {

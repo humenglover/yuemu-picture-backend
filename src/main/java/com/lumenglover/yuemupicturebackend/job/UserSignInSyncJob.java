@@ -47,8 +47,12 @@ public class UserSignInSyncJob {
             int year = LocalDate.now().getYear();
             log.info("开始同步 {} 年的签到记录", year);
 
-            // 获取所有用户
+            // TODO: selectList(null) 全表加载，用户量大时有OOM风险。应改为分页查询。
+            // 建议: 使用分页循环(pageSize=500)，或用 MyBatis-Plus 的 BaseMapper.selectList 配合 QueryWrapper.last("LIMIT N") 分批处理
             List<User> userList = userMapper.selectList(null);
+            if (userList.size() > 10000) {
+                log.warn("用户数量超过10000，全量加载存在OOM风险，建议尽快改造为分页处理");
+            }
             if (CollUtil.isEmpty(userList)) {
                 log.info("没有需要同步的用户数据");
                 return;

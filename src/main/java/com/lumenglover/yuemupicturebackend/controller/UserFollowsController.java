@@ -71,7 +71,7 @@ public class UserFollowsController {
       Long targetUserId = userfollowsQueryRequest.getFollowingId() != null ? userfollowsQueryRequest.getFollowingId() : userfollowsQueryRequest.getFollowerId();
       User targetUser = userService.getById(targetUserId);
       if (targetUser != null) {
-         User loginUser = userService.getLoginUser(request);
+         User loginUser = userService.isLogin(request);
          boolean isOwner = loginUser != null && java.util.Objects.equals(targetUser.getId(), loginUser.getId());
 
          if (!isOwner) {

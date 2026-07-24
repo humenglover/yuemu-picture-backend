@@ -147,9 +147,10 @@ public class PexelsUploadServiceImpl implements PexelsUploadService {
                                               String chineseTitle, User botUser) {
         // 1. 构造上传请求
         PictureUploadRequest uploadRequest = new PictureUploadRequest();
-        // 使用 large 尺寸图片（而非原图），减少文件大小，提升前端加载速度
-        // large 尺寸通常为 1280px 宽度，适合网页展示，同时保持较好的清晰度
-        uploadRequest.setFileUrl(photo.getSrc().getLarge());
+        // 🔥 智能选择图片尺寸：根据像素宽度选择合适的尺寸，避免下载超大文件
+        // large(标准大图约1280px) → medium(中图) 逐级降级，避免 >20MB 的文件
+        String bestUrl = selectBestImageSize(photo);
+        uploadRequest.setFileUrl(bestUrl);
         uploadRequest.setPicName(chineseTitle); // 使用翻译后的中文标题
         uploadRequest.setIntroduction(buildIntroduction(record)); // 构建简介
 
@@ -190,6 +191,41 @@ public class PexelsUploadServiceImpl implements PexelsUploadService {
         log.info("✅ 图片上传成功 | pexelsPhotoId={} | pictureId={} | 标题={} | 审核状态={} | 草稿状态={}",
                 record.getPexelsPhotoId(), pictureVO.getId(), chineseTitle,
                 pictureVO.getReviewStatus(), pictureVO.getIsDraft());
+    }
+
+    /**
+     * 🔥 智能选择最佳图片尺寸，避免下载超大文件
+     * Pexels 尺寸对照: original(原图,可>20MB) > large2x(2倍大图) > large(标准大图~1280px) > medium(中图) > small(小图)
+     */
+    private String selectBestImageSize(PexelsPhoto photo) {
+        Integer width = photo.getWidth();
+        // 超高分辨率原图（宽度>3000px）→ 优先用 medium，避免大文件
+        if (width != null && width > 3000) {
+            String mediumUrl = photo.getSrc().getMedium();
+            if (StrUtil.isNotBlank(mediumUrl)) {
+                log.info("📐 图片宽度 {}px > 3000px，使用 medium 尺寸: {}", width, mediumUrl);
+                return mediumUrl;
+            }
+        }
+        // 高分辨率（宽度>2000px）→ 用 large 即可
+        if (width != null && width > 2000) {
+            String largeUrl = photo.getSrc().getLarge();
+            if (StrUtil.isNotBlank(largeUrl)) {
+                log.info("📐 图片宽度 {}px，使用 large 尺寸", width);
+                return largeUrl;
+            }
+        }
+        // 正常尺寸或无法获取宽度 → 默认用 large（安全的选择）
+        String largeUrl = photo.getSrc().getLarge();
+        if (StrUtil.isNotBlank(largeUrl)) {
+            return largeUrl;
+        }
+        // large 不可用 → 降级到 medium → small → original（兜底）
+        return Optional.ofNullable(photo.getSrc().getMedium())
+                .filter(StrUtil::isNotBlank)
+                .orElse(Optional.ofNullable(photo.getSrc().getSmall())
+                        .filter(StrUtil::isNotBlank)
+                        .orElse(photo.getSrc().getOriginal()));
     }
 
     /**
@@ -293,12 +329,19 @@ public class PexelsUploadServiceImpl implements PexelsUploadService {
      * 处理上传失败
      */
     private void handleUploadFailure(PexelsCrawlRecord record, String errorMsg) {
-        record.setRetryCount(record.getRetryCount() + 1);
-        record.setErrorMessage(errorMsg);
+        // 🔥 文件过大错误无需重试，直接标记为永久失败
+        if (errorMsg != null && (errorMsg.contains("文件大小") || errorMsg.contains("超过限制"))) {
+            record.setUploadStatus(2); // 直接标记为失败
+            record.setErrorMessage("文件过大: " + errorMsg);
+            log.warn("🚫 文件过大，直接标记为失败: pexelsPhotoId={}", record.getPexelsPhotoId());
+        } else {
+            record.setRetryCount(record.getRetryCount() + 1);
+            record.setErrorMessage(errorMsg);
 
-        // 重试次数超过3次，标记为失败
-        if (record.getRetryCount() >= 3) {
-            record.setUploadStatus(2); // 失败
+            // 重试次数超过3次，标记为失败
+            if (record.getRetryCount() >= 3) {
+                record.setUploadStatus(2); // 失败
+            }
         }
 
         crawlRecordService.updateById(record);

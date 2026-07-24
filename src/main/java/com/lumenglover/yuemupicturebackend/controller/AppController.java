@@ -165,7 +165,7 @@ public class AppController {
     }
 
     private Long getUserIdFromRequest(HttpServletRequest request) {
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.isLogin(request);
         return loginUser != null ? loginUser.getId() : null;
     }
 

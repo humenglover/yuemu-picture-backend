@@ -13,10 +13,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import static io.qdrant.client.ValueFactory.value;
 
@@ -35,6 +38,10 @@ public class QdrantSyncJob {
 
     @Resource
     private QdrantClient qdrantClient;
+
+    @Resource
+    @Qualifier("asyncExecutor")
+    private Executor asyncExecutor;
 
     @Value("${qdrant.collection-name:yuemu_picture}")
     private String collectionName;
@@ -134,8 +141,8 @@ public class QdrantSyncJob {
      */
     @Scheduled(cron = "0 30 3 * * ?")
     public void consistencyCheckAsync() {
-        // 使用独立线程执行校验，防止阻塞调度线程池
-        new Thread(() -> {
+        // 使用线程池执行校验，避免裸 new Thread() 导致线程泄漏
+        asyncExecutor.execute(() -> {
             log.info("开始执行 Qdrant 数据一致性校验(异步兜底)...");
             try {
                 // 1. 获取 MySQL 中有效图片总数（不区分审核状态，但由于 MyBatis-Plus 全局逻辑删除所以不包括已删除数据）
@@ -160,6 +167,6 @@ public class QdrantSyncJob {
             } catch (Exception e) {
                 log.error("Qdrant 数据一致性校验发生异常", e);
             }
-        }, "Qdrant-Consistency-Check-Thread").start();
+        });
     }
 }

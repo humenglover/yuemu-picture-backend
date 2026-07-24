@@ -54,8 +54,17 @@ public abstract class PictureUploadTemplate {
         try {
             // 3. 创建临时文件，获取文件到服务器
             file = File.createTempFile(uploadPath, null);
-            // 处理文件来源
+            // 处理文件来源（下载/复制文件到临时目录）
             processFile(inputSource, file);
+            // 3.5. 🔥 下载后强制文件大小检查（最后一道防线）
+            final long MAX_FILE_SIZE = 20 * 1024 * 1024L; // 20MB 上限
+            long actualFileSize = file.length();
+            if (actualFileSize > MAX_FILE_SIZE) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR,
+                        String.format("文件大小 %.2fMB 超过限制（最大20MB），请压缩后上传",
+                                actualFileSize / (1024.0 * 1024.0)));
+            }
+            log.info("文件大小校验通过: {} bytes", actualFileSize);
             // 4. 上传图片到对象存储
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
             // 5. 获取图片信息对象，封装返回结果

@@ -51,10 +51,10 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
         attributes.put("clientIp", clientIp);
         log.info("WebSocket握手 - 客户端IP: {}", clientIp);
 
-        // 获取当前登录用户
-        User loginUser = userService.getLoginUser(httpRequest);
-        if (ObjUtil.isEmpty(loginUser)) {
-            log.error("用户未登录，拒绝握手");
+        // 获取当前登录用户（使用isLogin返回null而非抛异常，确保WebSocket握手正确返回false）
+        User loginUser = userService.isLogin(httpRequest);
+        if (loginUser == null) {
+            log.warn("用户未登录，拒绝WebSocket握手");
             return false;
         }
 

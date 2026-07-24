@@ -1,6 +1,7 @@
 package com.lumenglover.yuemupicturebackend.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.lumenglover.yuemupicturebackend.utils.VoUrlReplaceUtil;
 
 import java.io.Serializable;
@@ -31,8 +32,9 @@ public class User implements Serializable {
     private String email;
 
     /**
-     * 密码
+     * 密码（禁止序列化到JSON响应中）
      */
+    @JsonIgnore
     private String userPassword;
 
     /**

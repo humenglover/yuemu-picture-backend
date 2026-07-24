@@ -27,7 +27,8 @@ public class RequestWrapper extends HttpServletRequestWrapper {
             while ((bytesRead = bufferedReader.read(charBuffer)) > 0) {
                 stringBuilder.append(charBuffer, 0, bytesRead);
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            log.warn("读取请求体失败，body将为空", e);
         }
         body = stringBuilder.toString();
     }
@@ -38,12 +39,12 @@ public class RequestWrapper extends HttpServletRequestWrapper {
         return new ServletInputStream() {
             @Override
             public boolean isFinished() {
-                return false;
+                return byteArrayInputStream.available() == 0;
             }
 
             @Override
             public boolean isReady() {
-                return false;
+                return byteArrayInputStream.available() > 0;
             }
 
             @Override

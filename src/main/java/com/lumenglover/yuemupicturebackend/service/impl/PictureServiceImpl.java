@@ -2327,30 +2327,38 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = this.getById(id);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
 
-        // 空间权限校验
-        Long spaceId = picture.getSpaceId();
-        Space space = null;
-        if (spaceId != null) {
-            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
-            ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
-            space = spaceService.getById(spaceId);
-            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-        } else {
-            // 如果是公共空间图片，需要检查公共空间权限
-            User loginUser = null;
-            try {
-                loginUser = userService.getLoginUser(request);
-            } catch (Exception e) {
-                // 如果未登录，loginUser保持为null
-            }
-        }
-
-        // 获取权限列表
+        // 尝试获取登录用户（未登录则为null）
         User loginUser = null;
         try {
             loginUser = userService.getLoginUser(request);
         } catch (Exception e) {
             // 如果未登录，loginUser保持为null
+        }
+
+        // 空间权限校验
+        Long spaceId = picture.getSpaceId();
+        Space space = null;
+        if (spaceId != null) {
+            // 空间图片需要登录和空间权限
+            if (loginUser == null) {
+                throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "该图片属于私有空间，请登录后查看");
+            }
+            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
+            ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
+            space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+        } else {
+            // 公开图片：未登录用户只能查看审核通过且非草稿的图片
+            if (loginUser == null) {
+                boolean isDraft = picture.getIsDraft() != null && picture.getIsDraft() == 1;
+                boolean isApproved = picture.getReviewStatus() != null && picture.getReviewStatus() == 1;
+                if (isDraft) {
+                    throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "该图片为草稿，请登录后查看");
+                }
+                if (!isApproved) {
+                    throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "该图片暂未公开，请登录后查看");
+                }
+            }
         }
         List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
 

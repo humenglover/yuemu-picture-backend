@@ -408,10 +408,7 @@ public class CommentsServiceImpl extends ServiceImpl<CommentsMapper, Comments> i
 
     @Override
     public Page<CommentsVO> queryComment(CommentsQueryRequest commentsQueryRequest, HttpServletRequest request) {
-        User currentUser = userService.getLoginUser(request);
-        if (currentUser == null) {
-            return new Page<>(commentsQueryRequest.getCurrent(), commentsQueryRequest.getPageSize(), 0);
-        }
+        User currentUser = userService.isLogin(request);
 
         long current = commentsQueryRequest.getCurrent();
         long size = commentsQueryRequest.getPageSize();

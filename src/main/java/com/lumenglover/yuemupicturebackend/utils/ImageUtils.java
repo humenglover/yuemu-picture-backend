@@ -214,14 +214,12 @@ public class ImageUtils {
      * 添加填充以增加文件大小
      */
     private static byte[] addPaddingToImage(byte[] imageData) {
-        // 创建一个新的字节数组，大小为最小要求
+        // 创建一个新的字节数组，大小为最小要求（腾讯云审核要求≥3KB）
         byte[] paddedData = new byte[(int) MIN_SIZE_BYTES];
         // 复制原始图片数据
         System.arraycopy(imageData, 0, paddedData, 0, imageData.length);
-        // 用随机数据填充剩余空间
-        for (int i = imageData.length; i < paddedData.length; i++) {
-            paddedData[i] = (byte) (Math.random() * 256);
-        }
+        // 用零填充剩余空间（image decoder会忽略IEND/EOI后的数据，零填充安全且确定）
+        // 不再使用 Math.random() 避免不确定性和潜在的文件结构损坏
         return paddedData;
     }
 

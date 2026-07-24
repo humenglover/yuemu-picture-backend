@@ -180,7 +180,7 @@ public class MessageQaController {
             RagUserSession session = ragUserSessionService.getById(sessionId);
             if (session == null || !session.getUserId().equals(userId) || session.getIsDelete() == 1) {
                 log.warn("RAG获取AI回答 - 会话不存在或无权限访问，sessionId: {}, userId: {}", sessionId, userId);
-                throw new BusinessException(ErrorCode.PARAMS_ERROR, "会话不存在或无权限访问");
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "会话不存在或无权限访问");
             }
 
             // 验证并扣减 AI Token 额度预检
@@ -247,7 +247,7 @@ public class MessageQaController {
             // 验证会话权限
             RagUserSession session = ragUserSessionService.getById(sessionId);
             if (session == null || !session.getUserId().equals(userId) || session.getIsDelete() == 1) {
-                throw new BusinessException(ErrorCode.PARAMS_ERROR, "会话不存在或无权限访问");
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "会话不存在或无权限访问");
             }
 
             messageQueryRequest.setSortField("createTime");

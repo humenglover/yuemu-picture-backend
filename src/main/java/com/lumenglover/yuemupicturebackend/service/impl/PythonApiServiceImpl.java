@@ -43,13 +43,17 @@ public class PythonApiServiceImpl implements PythonApiService {
                     .timeout(timeout)
                     .execute();
 
-            if (!response.isOk()) {
-                log.error("调用 Python 端去除背景失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
-                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
-            }
+            try {
+                if (!response.isOk()) {
+                    log.error("调用 Python 端去除背景失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
+                }
 
-            // 获取抠图后的图片二进制返回
-            return response.bodyBytes();
+                // 获取抠图后的图片二进制返回
+                return response.bodyBytes();
+            } finally {
+                response.close();
+            }
         } catch (IOException e) {
             log.error("读取上传图片字节流时发生错误：", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件处理异常");
@@ -80,12 +84,16 @@ public class PythonApiServiceImpl implements PythonApiService {
                     .timeout(timeout)
                     .execute();
 
-            if (!response.isOk()) {
-                log.error("调用 Python 端人脸打码失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
-                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
-            }
+            try {
+                if (!response.isOk()) {
+                    log.error("调用 Python 端人脸打码失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
+                }
 
-            return response.bodyBytes();
+                return response.bodyBytes();
+            } finally {
+                response.close();
+            }
         } catch (IOException e) {
             log.error("读取上传图片字节流时发生错误：", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件处理异常");
@@ -124,12 +132,16 @@ public class PythonApiServiceImpl implements PythonApiService {
 
             HttpResponse response = request.execute();
 
-            if (!response.isOk()) {
-                log.error("调用 Python 端换背景失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
-                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
-            }
+            try {
+                if (!response.isOk()) {
+                    log.error("调用 Python 端换背景失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
+                }
 
-            return response.bodyBytes();
+                return response.bodyBytes();
+            } finally {
+                response.close();
+            }
         } catch (IOException e) {
             log.error("读取图片字节流时发生错误：", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件处理异常");
@@ -160,12 +172,16 @@ public class PythonApiServiceImpl implements PythonApiService {
                     .timeout(timeout)
                     .execute();
 
-            if (!response.isOk()) {
-                log.error("调用 Python 端增强清晰度失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
-                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
-            }
+            try {
+                if (!response.isOk()) {
+                    log.error("调用 Python 端增强清晰度失败，状态码: {}, 响应: {}", response.getStatus(), response.body());
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "Python 端服务处理失败，请稍后重试");
+                }
 
-            return response.bodyBytes();
+                return response.bodyBytes();
+            } finally {
+                response.close();
+            }
         } catch (IOException e) {
             log.error("读取上传图片字节流时发生错误：", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件处理异常");

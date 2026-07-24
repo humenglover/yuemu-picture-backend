@@ -65,24 +65,28 @@ public class AliYunAiServiceImpl implements AliYunAiService {
                     .body(param.toString())
                     .execute();
 
-            if (response.isOk()) {
-                JSONObject resJson = JSONUtil.parseObj(response.body());
-                JSONObject output = resJson.getJSONObject("output");
-                if (output != null) {
-                    JSONArray embeddings = output.getJSONArray("embeddings");
-                    if (CollUtil.isNotEmpty(embeddings)) {
-                        JSONObject firstEmbedding = embeddings.getJSONObject(0);
-                        JSONArray embeddingArray = firstEmbedding.getJSONArray("embedding");
+            try {
+                if (response.isOk()) {
+                    JSONObject resJson = JSONUtil.parseObj(response.body());
+                    JSONObject output = resJson.getJSONObject("output");
+                    if (output != null) {
+                        JSONArray embeddings = output.getJSONArray("embeddings");
+                        if (CollUtil.isNotEmpty(embeddings)) {
+                            JSONObject firstEmbedding = embeddings.getJSONObject(0);
+                            JSONArray embeddingArray = firstEmbedding.getJSONArray("embedding");
 
-                        List<Double> result = new ArrayList<>();
-                        for (Object o : embeddingArray) {
-                            result.add(((Number) o).doubleValue());
+                            List<Double> result = new ArrayList<>();
+                            for (Object o : embeddingArray) {
+                                result.add(((Number) o).doubleValue());
+                            }
+                            return result;
                         }
-                        return result;
                     }
                 }
+                log.error("调用阿里云多模态大模型失败, HTTP 响应: {}", response.body());
+            } finally {
+                response.close();
             }
-            log.error("调用阿里云多模态大模型失败, HTTP 响应: {}", response.body());
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "大模型调用失败，请检查额度或网络");
 
         } catch (Exception e) {

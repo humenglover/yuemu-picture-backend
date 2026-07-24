@@ -16,8 +16,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import cn.dev33.satoken.stp.StpUtil;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.Executor;
 
 /**
  * RAG智能客服控制器
@@ -32,6 +35,10 @@ public class RagController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    @Qualifier("ragSummaryExecutor")
+    private Executor ragSummaryExecutor;
 
     /**
      * 智能客服对话接口
@@ -127,8 +134,8 @@ public class RagController {
 
             // 调用RAG服务的流式方法
             String saToken = StpUtil.getTokenValue();
-            // 在新线程中处理，避免阻塞主线程
-            new Thread(() -> {
+            // 使用线程池处理，避免裸 new Thread() 导致线程泄漏
+            ragSummaryExecutor.execute(() -> {
                 try {
                     ragService.chatStream(userId, userId, question, saToken, model, token -> {
                         try {
@@ -153,7 +160,7 @@ public class RagController {
                         emitter.complete();
                     }
                 }
-            }).start();
+            });
         } catch (Exception e) {
             log.error("创建流式响应失败", e);
             emitter.complete();

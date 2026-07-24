@@ -1781,15 +1781,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return user.getInviteCode();
         }
 
-        // 生成6位唯一邀请码
+        // 生成8位唯一邀请码（36^8组合，碰撞概率极低）
         String inviteCode;
-        while (true) {
-            inviteCode = RandomUtil.randomStringUpper(6);
+        int maxRetries = 100;
+        int retries = 0;
+        do {
+            inviteCode = RandomUtil.randomStringUpper(8);
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("inviteCode", inviteCode);
             if (this.count(queryWrapper) == 0) {
                 break;
             }
+            retries++;
+        } while (retries < maxRetries);
+        if (retries >= maxRetries) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "邀请码生成失败，请重试");
         }
 
         user.setInviteCode(inviteCode);

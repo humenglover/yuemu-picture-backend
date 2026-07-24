@@ -10,6 +10,7 @@ import com.meilisearch.sdk.Client;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.RedisCallback;
@@ -18,6 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.concurrent.Executor;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
@@ -75,6 +77,10 @@ public class HotSearchSyncJob implements HotSearchSync, CommandLineRunner {
     @Resource
     private RedissonClient redissonClient;
 
+    @Resource
+    @Qualifier("asyncExecutor")
+    private Executor asyncExecutor;
+
     /**
      * 应用启动时进行缓存预热
      */
@@ -119,8 +125,8 @@ public class HotSearchSyncJob implements HotSearchSync, CommandLineRunner {
      * 缓存预热失败后的重试调度
      */
     private void scheduleWarmupRetry() {
-        // 在新线程中延迟1分钟后重试
-        new Thread(() -> {
+        // 使用线程池延迟1分钟后重试，避免裸 new Thread() 导致线程泄漏
+        asyncExecutor.execute(() -> {
             try {
                 Thread.sleep(60 * 1000); // 延迟1分钟
                 log.info("开始重试热门搜索缓存预热");
@@ -136,7 +142,7 @@ public class HotSearchSyncJob implements HotSearchSync, CommandLineRunner {
             } catch (Exception e) {
                 log.error("缓存预热重试失败", e);
             }
-        }).start();
+        });
     }
 
     /**

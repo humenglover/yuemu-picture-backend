@@ -55,9 +55,6 @@ public class RedisRateLimiterAspect {
     private final StringRedisTemplate redisTemplate;
     private final UserService userService;
 
-    @Value("${rate-limit.anonymous-limit:512}")
-    private int anonymousLimit;
-
     @Around("@annotation(rateLimiter)")
     public Object around(ProceedingJoinPoint point, RateLimiter rateLimiter) throws Throwable {
         String baseKey = rateLimiter.key();
@@ -75,11 +72,8 @@ public class RedisRateLimiterAspect {
         String userId = getUserId(request);
         String limitKey = buildSafeLimitKey(baseKey, userId);
 
-        // 对于匿名用户，使用配置的匿名用户限流阈值
+        // 使用注解声明的限流阈值（不再被匿名配置覆盖）
         int effectiveMaxCount = maxCount;
-        if ("anonymous".equals(userId)) {
-            effectiveMaxCount = anonymousLimit; // 匿名用户使用配置的限流阈值
-        }
 
         try {
             Long result = redisTemplate.execute(
@@ -144,16 +138,30 @@ public class RedisRateLimiterAspect {
         }
 
         if (httpRequest == null) {
-            return "anonymous";
+            return "unknown";
         }
 
         try {
             User loginUser = userService.getLoginUser(httpRequest);
-            return loginUser != null ? loginUser.getId().toString() : "anonymous";
+            if (loginUser != null) {
+                return loginUser.getId().toString();
+            }
         } catch (Exception e) {
-            log.debug("获取登录用户失败，使用匿名标识", e);
-            return "anonymous";
+            log.debug("获取登录用户失败，使用IP标识", e);
         }
+        // 未登录用户：按 IP 限流，不再共享 "anonymous"
+        return "ip:" + getClientIp(httpRequest);
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip != null ? ip : "0.0.0.0";
     }
 
     private String buildSafeLimitKey(String baseKey, String userId) {

@@ -52,8 +52,8 @@ public class CommentsController {
     @PostMapping("/query")
     @RateLimiter(key = "comment_query", time = 60, count = 60, message = "评论查询过于频繁，请稍后再试")
     public BaseResponse<Page<CommentsVO>> queryComment(@RequestBody CommentsQueryRequest commentsQueryRequest, HttpServletRequest request) {
-        // 用户权限校验
-        User loginUser = userService.getLoginUser(request);
+        // 检查封禁用户（未登录用户不校验）
+        User loginUser = userService.isLogin(request);
         if (loginUser != null) {
             String userRole = loginUser.getUserRole();
             ThrowUtils.throwIf(userRole.equals(CrawlerConstant.BAN_ROLE),

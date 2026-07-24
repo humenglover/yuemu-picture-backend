@@ -281,7 +281,7 @@ public class PostController {
         // 检测爬虫
         crawlerManager.detectNormalRequest(request);
 
-        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.isLogin(request);
         PostVO post = postService.getPostDetail(id, loginUser, request);
         return ResultUtils.success(post);
     }

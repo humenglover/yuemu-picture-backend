@@ -4,6 +4,7 @@ import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -28,8 +29,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BusinessException.class)
-    public BaseResponse<?> businessExceptionHandler(BusinessException e) {
+    public BaseResponse<?> businessExceptionHandler(BusinessException e, HttpServletResponse response) {
         log.error("BusinessException", e);
+        if (e.getCode() == ErrorCode.TOO_MANY_REQUEST.getCode()
+            || e.getCode() == ErrorCode.TOO_MANY_REQUEST_ERROR.getCode()) {
+            response.setStatus(429); // Too Many Requests
+        }
         return ResultUtils.error(e.getCode(), e.getMessage());
     }
 

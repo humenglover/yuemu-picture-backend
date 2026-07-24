@@ -1,7 +1,6 @@
 spring:
   profiles:
-    active: prod
-
+    active: dev
 # Sa-Token配置
 sa-token:
   # token名称 (同时也是cookie名称)
@@ -83,8 +82,8 @@ mybatis-plus:
 
 # 限流配置
 rate-limit:
-  # 匿名用户（未登录用户）的限流阈值（每分钟）
-  anonymous-limit: 512
+  # 匿名用户（未登录用户）的限流兜底阈值（每分钟），具体限流由 @RateLimiter 注解控制
+  anonymous-limit: 30
   # 默认限流配置（当未指定时使用）
   default:
     time: 60

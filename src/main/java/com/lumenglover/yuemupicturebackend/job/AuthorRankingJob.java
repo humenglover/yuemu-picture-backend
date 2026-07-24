@@ -2,12 +2,14 @@ package com.lumenglover.yuemupicturebackend.job;
 
 import com.lumenglover.yuemupicturebackend.service.AuthorRankingService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.concurrent.Executor;
 
 /**
  * 作者榜单定时任务
@@ -19,6 +21,10 @@ public class AuthorRankingJob implements ApplicationRunner {
     @Resource
     private AuthorRankingService authorRankingService;
 
+    @Resource
+    @Qualifier("asyncExecutor")
+    private Executor asyncExecutor;
+
     /**
      * 应用启动时执行一次榜单计算
      */
@@ -26,8 +32,8 @@ public class AuthorRankingJob implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         log.info("应用启动：开始初始化作者榜单数据");
         try {
-            // 异步执行，避免阻塞应用启动
-            new Thread(() -> {
+            // 使用线程池异步执行，避免阻塞应用启动，防止裸 new Thread() 线程泄漏
+            asyncExecutor.execute(() -> {
                 try {
                     // 延迟5秒，等待其他服务初始化完成
                     Thread.sleep(5000);
@@ -36,7 +42,7 @@ public class AuthorRankingJob implements ApplicationRunner {
                 } catch (Exception e) {
                     log.error("应用启动：作者榜单初始化失败", e);
                 }
-            }).start();
+            });
         } catch (Exception e) {
             log.error("应用启动：启动榜单初始化线程失败", e);
         }
