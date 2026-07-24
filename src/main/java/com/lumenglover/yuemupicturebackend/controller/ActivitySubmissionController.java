@@ -1,23 +1,39 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.activity.ActivitySubmissionAddRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.activity.ActivitySubmissionQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.activity.ActivitySubmissionReviewRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.ActivitySubmission;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.vo.ActivitySubmissionVO;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.ActivitySubmissionService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.*;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -45,7 +61,7 @@ public class ActivitySubmissionController {
      * 审核提交（仅管理员）
      */
     @PostMapping("/review")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> reviewSubmission(@RequestBody ActivitySubmissionReviewRequest request,
                                                    HttpServletRequest httpRequest) {
         Boolean result = activitySubmissionService.reviewSubmission(request, httpRequest);

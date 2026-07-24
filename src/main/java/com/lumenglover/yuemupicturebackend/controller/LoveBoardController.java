@@ -1,24 +1,42 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.loveboard.LoveBoardAdminRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.loveboard.LoveBoardBatchRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.LoveBoard;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.LoveBoardService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.*;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -41,7 +59,7 @@ public class LoveBoardController {
      * 分页获取恋爱画板列表（仅管理员可用）
      */
     @PostMapping("/list/page/admin")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "love_board_list_admin", time = 60, count = 60, message = "管理员恋爱画板列表查询过于频繁，请稍后再试")
     public BaseResponse<Page<LoveBoard>> listLoveBoardsByPage(@RequestBody LoveBoardAdminRequest loveBoardAdminRequest) {
         long current = loveBoardAdminRequest.getCurrent();
@@ -59,7 +77,7 @@ public class LoveBoardController {
      * 根据 id 获取恋爱画板（仅管理员可用）
      */
     @GetMapping("/get/admin")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "love_board_get_admin", time = 60, count = 60, message = "管理员恋爱画板详情查询过于频繁，请稍后再试")
     public BaseResponse<LoveBoard> getLoveBoardByIdAdmin(long id) {
         if (id <= 0) {
@@ -76,7 +94,7 @@ public class LoveBoardController {
      * 更新恋爱画板（仅管理员可用）
      */
     @PostMapping("/update/admin")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "love_board_update_admin", time = 60, count = 60, message = "管理员恋爱画板更新过于频繁，请稍后再试")
     public BaseResponse<Boolean> updateLoveBoardAdmin(@RequestBody LoveBoard loveBoard) {
         if (loveBoard == null || loveBoard.getId() == null) {
@@ -90,7 +108,7 @@ public class LoveBoardController {
      * 批量操作恋爱画板（仅管理员可用）
      */
     @PostMapping("/batch")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "love_board_batch", time = 60, count = 60, message = "恋爱画板批量操作过于频繁，请稍后再试")
     public BaseResponse<Boolean> batchOperationLoveBoards(@RequestBody LoveBoardBatchRequest loveBoardBatchRequest,
                                                           HttpServletRequest request) {

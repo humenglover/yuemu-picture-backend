@@ -1,21 +1,36 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.PythonApiService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.http.HttpHeaders;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.http.HttpStatus;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.http.MediaType;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.http.ResponseEntity;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.PostMapping;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.RequestMapping;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.RequestPart;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.RestController;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.multipart.MultipartFile;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.annotation.Resource;
 
 /**
@@ -37,7 +52,7 @@ public class PythonApiController {
      * @return 图片字节流 ResponseEntity
      */
     @PostMapping("/remove_bg")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE) // 控制基本登录可用
+    @SaCheckLogin // 控制基本登录可用
     @com.lumenglover.yuemupicturebackend.annotation.RateLimiter(key = "ai_remove_bg", time = 60, count = 5, message = "AI 抠图过于频繁，请稍后再试")
     public ResponseEntity<byte[]> removeBackground(@RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -66,7 +81,7 @@ public class PythonApiController {
      * 智能人脸打码 (透传至 Python)
      */
     @PostMapping("/face_blur")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @com.lumenglover.yuemupicturebackend.annotation.RateLimiter(key = "ai_face_blur", time = 60, count = 5, message = "人脸打码过于频繁，请稍后再试")
     public ResponseEntity<byte[]> faceBlur(@RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -93,7 +108,7 @@ public class PythonApiController {
      * 智能更换图片背景 (MODNet)
      */
     @PostMapping("/change_background")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @com.lumenglover.yuemupicturebackend.annotation.RateLimiter(key = "ai_change_bg", time = 60, count = 5, message = "更换背景过于频繁，请稍后再试")
     public ResponseEntity<byte[]> changeBackground(
             @RequestPart("file") MultipartFile file,
@@ -123,7 +138,7 @@ public class PythonApiController {
      * 智能增强清晰度 (透传至 Python)
      */
     @PostMapping("/enhance_image")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @com.lumenglover.yuemupicturebackend.annotation.RateLimiter(key = "ai_enhance_image", time = 60, count = 5, message = "增强清晰度过于频繁，请稍后再试")
     public ResponseEntity<byte[]> enhanceImage(@RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {

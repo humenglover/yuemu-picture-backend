@@ -1,30 +1,54 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.activity.ActivityAddRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.activity.ActivityEditRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.activity.ActivityQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.Activity;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.ActivityService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.SpaceUserService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.SystemNotifyService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.manager.auth.model.SpaceUserPermissionConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.manager.auth.annotation.SaSpaceCheckPermission;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.*;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.stream.Collectors;
 
 /**
@@ -191,7 +215,7 @@ public class ActivityController {
      * 审核活动（仅管理员）
      */
     @PostMapping("/review")
-    @AuthCheck(mustRole = "admin")
+    @SaCheckRole("admin")
     @RateLimiter(key = "activity_review", time = 60, count = 60, message = "活动审核过于频繁，请稍后再试")
     public BaseResponse<Boolean> reviewActivity(@RequestParam Long activityId,
                                                 @RequestParam Integer status,

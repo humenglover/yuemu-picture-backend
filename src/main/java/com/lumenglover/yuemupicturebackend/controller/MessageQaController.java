@@ -1,46 +1,165 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.DeleteRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.dto.rag.QaMessageAddRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.dto.rag.QaMessageQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.RagSessionMessage;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.RagUserSession;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.vo.RagMessageVO;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.RagSessionMessageService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.RagUserSessionService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.RagService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.AiTokenRecordService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.AiResourceService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.http.MediaType;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.*;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.servlet.http.HttpServletRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.io.IOException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.HashMap;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.Map;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.stream.Collectors;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.util.CollectionUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.ConcurrentHashMap;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.CopyOnWriteArrayList;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.Executors;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.ScheduledExecutorService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.ScheduledFuture;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -105,7 +224,7 @@ public class MessageQaController {
      * @return 用户消息和AI消息
      */
     @PostMapping("/send")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "message_qa_send", time = 60, count = 15, message = "发送消息过于频繁，请稍后再试")
     public BaseResponse<RagMessageVO> sendQaMessage(@RequestBody QaMessageAddRequest messageAddRequest,
                                                     HttpServletRequest request) {
@@ -158,7 +277,7 @@ public class MessageQaController {
      * @return AI回答消息
      */
     @PostMapping("/answer")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "message_qa_answer", time = 60, count = 15, message = "获取AI回答过于频繁，请稍后再试")
     public BaseResponse<RagMessageVO> getQaAnswer(@RequestBody QaMessageQueryRequest messageQueryRequest,
                                                   HttpServletRequest request) {
@@ -231,7 +350,7 @@ public class MessageQaController {
      * 会话消息列表查询
      */
     @GetMapping("/list")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "message_qa_list", time = 60, count = 30, message = "消息列表查询过于频繁，请稍后再试")
     public BaseResponse<IPage<RagMessageVO>> listQaMessages(QaMessageQueryRequest messageQueryRequest,
                                                             HttpServletRequest request) {
@@ -272,7 +391,7 @@ public class MessageQaController {
     }
 
     @GetMapping(value = "/send/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "message_qa_stream", time = 60, count = 15, message = "发送流式消息过于频繁，请稍后再试")
     public SseEmitter sendQaStreamMessage(
             @RequestParam(value = "message", required = true) String content,
@@ -464,7 +583,7 @@ public class MessageQaController {
     }
 
     @PostMapping("/clearContext")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<RagMessageVO> clearSessionContext(@RequestParam Long sessionId, HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         Long userId = loginUser.getId();
@@ -500,7 +619,7 @@ public class MessageQaController {
     }
 
     @PostMapping("/list/page")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<IPage<RagMessageVO>> listAllMessagesByPage(
             @RequestBody(required = false) QaMessageQueryRequest messageQueryRequest) {
         if (messageQueryRequest == null)
@@ -513,7 +632,7 @@ public class MessageQaController {
     }
 
     @GetMapping("/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<RagMessageVO> getMessageById(long id) {
         RagSessionMessage message = ragSessionMessageService.getById(id);
         ThrowUtils.throwIf(message == null, ErrorCode.NOT_FOUND_ERROR);
@@ -521,7 +640,7 @@ public class MessageQaController {
     }
 
     @PostMapping("/delete/admin")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteMessageById(@RequestBody DeleteRequest deleteRequest) {
         return ResultUtils.success(ragSessionMessageService.removeById(deleteRequest.getId()));
     }
@@ -530,7 +649,7 @@ public class MessageQaController {
      * 获取TTS语音流
      */
     @GetMapping(value = "/tts", produces = "audio/mpeg")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public byte[] getTtsAudio(@RequestParam(value = "text") String text,
                               @RequestParam(value = "voiceType", required = false, defaultValue = "female_gentle") String voiceType) {
         if (text == null || text.trim().isEmpty()) {
@@ -549,7 +668,7 @@ public class MessageQaController {
      * 获取用户 AI Token 使用情况（5小时内及本周）
      */
     @GetMapping("/ai_token/usage")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<com.lumenglover.yuemupicturebackend.model.vo.AiTokenUsageVO> getAiTokenUsage(
             HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
@@ -560,7 +679,7 @@ public class MessageQaController {
      * 校验并扣减每周生图额度
      */
     @PostMapping("/image_gen/quota/deduct")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<Boolean> deductImageGenQuota(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         boolean success = aiTokenRecordService.checkAndDeductImageGenQuota(loginUser.getId());

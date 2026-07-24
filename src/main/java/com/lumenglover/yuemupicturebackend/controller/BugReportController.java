@@ -1,32 +1,58 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter; // 添加限流器注解
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.DeleteRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.bugreport.BugReportAddRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.bugreport.BugReportQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.bugreport.BugReportUpdateRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.BugReport;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.vo.BugReportVO;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.BugReportService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.beans.BeanUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.GetMapping;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.PostMapping;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.RequestBody;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.RequestMapping;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.RestController;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -87,7 +113,7 @@ public class BugReportController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "bug_report_update", time = 60, count = 30, message = "更新bug报告过于频繁，请稍后再试")
     public BaseResponse<Boolean> updateBugReport(@RequestBody BugReportUpdateRequest bugReportUpdateRequest, HttpServletRequest request) {
         if (bugReportUpdateRequest == null || bugReportUpdateRequest.getId() == null) {
@@ -167,7 +193,7 @@ public class BugReportController {
      * @return
      */
     @PostMapping("/admin/solve")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "bug_report_solve", time = 60, count = 30, message = "解决bug报告过于频繁，请稍后再试")
     public BaseResponse<Boolean> solveBugReport(Long id, Integer status, String resolution) {
         if (id == null || id <= 0) {

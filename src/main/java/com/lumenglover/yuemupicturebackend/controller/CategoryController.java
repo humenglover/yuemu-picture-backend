@@ -1,26 +1,46 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.PageRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.CategoryConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.Category;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.vo.CategoryVO;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.CategoryService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.GetMapping;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.PostMapping;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.RequestParam;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.RequestMapping;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.PathVariable;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.RestController;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.Objects;
 
 @RestController
@@ -36,7 +56,7 @@ public class CategoryController {
     * @return 分类列表（包含统计信息）
     */
    @PostMapping("/list/page/vo")
-   @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+   @SaCheckRole("admin")
    @RateLimiter(key = "category_list_page", time = 60, count = 60, message = "分类列表分页查询过于频繁，请稍后再试")
    public BaseResponse<Page<CategoryVO>> listCategoryVO(PageRequest pageRequest,
                                                         @RequestParam(required = false) Integer type) {
@@ -79,7 +99,7 @@ public class CategoryController {
     * @return 添加结果
     */
    @PostMapping("/add")
-   @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+   @SaCheckRole("admin")
    @RateLimiter(key = "category_add", time = 60, count = 60, message = "添加分类过于频繁，请稍后再试")
    public BaseResponse<Boolean> addCategory(@RequestParam String categoryName,
                                             @RequestParam Integer type) {
@@ -98,7 +118,7 @@ public class CategoryController {
     * @return 删除结果
     */
    @PostMapping("/delete")
-   @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+   @SaCheckRole("admin")
    @RateLimiter(key = "category_delete", time = 60, count = 60, message = "删除分类过于频繁，请稍后再试")
    public BaseResponse<Boolean> deleteCategory(@RequestParam Long categoryId) {
       return ResultUtils.success(categoryService.removeById(categoryId));
@@ -111,7 +131,7 @@ public class CategoryController {
     * @return 匹配的分类列表
     */
    @PostMapping("/search")
-   @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+   @SaCheckRole("admin")
    @RateLimiter(key = "category_search", time = 60, count = 60, message = "分类搜索过于频繁，请稍后再试")
    public BaseResponse<List<CategoryVO>> findCategory(@RequestParam String categoryName,
                                                       @RequestParam(required = false) Integer type) {

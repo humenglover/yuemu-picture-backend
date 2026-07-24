@@ -1,24 +1,80 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.KnowledgeFile;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.dto.knowledgefile.KnowledgeFileQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.vo.KnowledgeFileVO;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.KnowledgeFileService;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.beans.factory.annotation.Autowired;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.*;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.multipart.MultipartFile;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.servlet.http.HttpServletRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.io.IOException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.List;
 
 /**
@@ -42,7 +98,7 @@ public class KnowledgeFileController {
      * @return 文件信息
      */
     @PostMapping("/upload")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<KnowledgeFile> uploadKnowledgeFile(@RequestParam("file") MultipartFile file,
                                                            HttpServletRequest httpServletRequest) throws IOException {
         if (file == null || file.isEmpty()) {
@@ -62,7 +118,7 @@ public class KnowledgeFileController {
      * @return 删除结果
      */
     @PostMapping("/batch-delete")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<Boolean> batchDeleteKnowledgeFiles(@RequestBody List<Long> ids, HttpServletRequest httpServletRequest) {
         if (ids == null || ids.isEmpty()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件ID列表不能为空");
@@ -83,7 +139,7 @@ public class KnowledgeFileController {
      * @return 同步结果
      */
     @PostMapping("/sync")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> syncKnowledgeFiles(HttpServletRequest httpServletRequest) {
         User loginUser = userService.getLoginUser(httpServletRequest);
         boolean success = knowledgeFileService.syncKnowledgeFiles();
@@ -100,7 +156,7 @@ public class KnowledgeFileController {
      * @return 分页结果
      */
     @PostMapping("/list/page/vo")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<Page<KnowledgeFileVO>> listKnowledgeFileVOByPage(
             @RequestBody KnowledgeFileQueryRequest knowledgeFileQueryRequest,
             HttpServletRequest httpServletRequest) {
@@ -139,7 +195,7 @@ public class KnowledgeFileController {
      * @return 文件详情
      */
     @GetMapping("/get/vo")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<KnowledgeFileVO> getKnowledgeFileVOById(Long id, HttpServletRequest httpServletRequest) {
         if (id == null || id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件ID不能为空");

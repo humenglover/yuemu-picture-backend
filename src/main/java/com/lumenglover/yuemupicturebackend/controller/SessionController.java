@@ -1,32 +1,109 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.DeleteRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.dto.rag.SessionDeleteRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.dto.rag.SessionQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.dto.rag.SessionSwitchRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.RagUserSession;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.vo.RagSessionVO;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.RagUserSessionService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.*;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.servlet.http.HttpServletRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.stream.Collectors;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -57,7 +134,7 @@ public class SessionController {
      * @return 新建的会话信息
      */
     @PostMapping("/create")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "session_create", time = 60, count = 5, message = "会话创建过于频繁，请稍后再试")
     public BaseResponse<RagSessionVO> createSession(@RequestBody(required = false) SessionQueryRequest sessionQueryRequest, HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
@@ -79,7 +156,7 @@ public class SessionController {
      * @return 会话列表
      */
     @GetMapping("/list")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "session_list", time = 60, count = 30, message = "会话列表查询过于频繁，请稍后再试")
     public BaseResponse<IPage<RagSessionVO>> listSessions(SessionQueryRequest sessionQueryRequest, HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
@@ -114,7 +191,7 @@ public class SessionController {
      * @return 切换结果
      */
     @PostMapping("/switch")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "session_switch", time = 60, count = 10, message = "会话切换过于频繁，请稍后再试")
     public BaseResponse<RagSessionVO> switchSession(@RequestBody SessionSwitchRequest sessionSwitchRequest, HttpServletRequest request) {
         if (sessionSwitchRequest == null || sessionSwitchRequest.getSessionId() == null) {
@@ -147,7 +224,7 @@ public class SessionController {
      * @return 删除结果
      */
     @PostMapping("/delete")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "session_delete", time = 60, count = 10, message = "会话删除过于频繁，请稍后再试")
     public BaseResponse<Boolean> deleteSession(@RequestBody SessionDeleteRequest sessionDeleteRequest, HttpServletRequest request) {
         if (sessionDeleteRequest == null || sessionDeleteRequest.getSessionId() == null) {
@@ -178,7 +255,7 @@ public class SessionController {
      * @return 更新结果
      */
     @PostMapping("/updateName")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "session_update_name", time = 60, count = 10, message = "会话名称更新过于频繁，请稍后再试")
     public BaseResponse<Boolean> updateSessionName(@RequestBody SessionQueryRequest sessionQueryRequest, HttpServletRequest request) {
         if (sessionQueryRequest == null || sessionQueryRequest.getId() == null || sessionQueryRequest.getSessionName() == null) {
@@ -210,7 +287,7 @@ public class SessionController {
      * @return 生成的会话名称
      */
     @PostMapping("/autoName")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "session_auto_name", time = 60, count = 10, message = "自动命名过于频繁，请稍后再试")
     public BaseResponse<String> autoNameSession(@RequestBody SessionQueryRequest sessionQueryRequest, HttpServletRequest request) {
         if (sessionQueryRequest == null || sessionQueryRequest.getId() == null) {
@@ -297,7 +374,7 @@ public class SessionController {
      * @return 会话列表
      */
     @PostMapping("/list/page")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<IPage<RagSessionVO>> listSessionsByPage(@RequestBody(required = false) SessionQueryRequest sessionQueryRequest, HttpServletRequest request) {
         if (sessionQueryRequest == null) {
             sessionQueryRequest = new SessionQueryRequest();
@@ -324,7 +401,7 @@ public class SessionController {
      * @return 会话信息
      */
     @GetMapping("/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<RagSessionVO> getSessionById(long id) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         RagUserSession session = ragUserSessionService.getById(id);
@@ -339,7 +416,7 @@ public class SessionController {
      * @return 删除结果
      */
     @PostMapping("/delete/admin")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteSessionById(@RequestBody DeleteRequest deleteRequest) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -356,7 +433,7 @@ public class SessionController {
      * @return 删除结果
      */
     @PostMapping("/delete/batch")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteBatchSessions(@RequestBody List<DeleteRequest> deleteRequestList) {
         if (CollectionUtils.isEmpty(deleteRequestList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);

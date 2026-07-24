@@ -1,23 +1,40 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qcloud.cos.model.COSObject;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qcloud.cos.model.COSObjectInputStream;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qcloud.cos.utils.IOUtils;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.manager.CosManager;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.*;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.multipart.MultipartFile;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.io.File;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.io.IOException;
 
 @Slf4j
@@ -34,7 +51,7 @@ public class FileController {
      * @param multipartFile
      * @return
      */
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @PostMapping("/test/upload")
     @RateLimiter(key = "file_test_upload", time = 60, count = 60, message = "测试文件上传过于频繁，请稍后再试")
     public BaseResponse<String> testUploadFile(@RequestPart("file") MultipartFile multipartFile) {
@@ -69,7 +86,7 @@ public class FileController {
      * @param filepath 文件路径
      * @param response 响应对象
      */
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @GetMapping("/test/download/")
     @RateLimiter(key = "file_test_download", time = 60, count = 60, message = "测试文件下载过于频繁，请稍后再试")
     public void testDownloadFile(String filepath, HttpServletResponse response) throws IOException {

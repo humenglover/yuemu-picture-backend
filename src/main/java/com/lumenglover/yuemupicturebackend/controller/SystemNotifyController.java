@@ -1,26 +1,46 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.systemnotify.SystemNotifyAddRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.systemnotify.SystemNotifyQueryRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.dto.systemnotify.SystemNotifyUpdateRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.SystemNotify;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.SystemNotifyService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.beans.BeanUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.*;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletRequest;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.Date;
 
 /**
@@ -43,7 +63,7 @@ public class SystemNotifyController {
      * 创建通知（管理员推送/系统触发）
      */
     @PostMapping
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Long> addSystemNotify(@RequestBody SystemNotifyAddRequest systemNotifyAddRequest) {
         if (systemNotifyAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -68,7 +88,7 @@ public class SystemNotifyController {
      * 更新通知（仅未发送/特定状态）
      */
     @PutMapping("/{id}")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<SystemNotify> updateSystemNotify(@PathVariable Long id, @RequestBody SystemNotifyUpdateRequest systemNotifyUpdateRequest) {
         if (id == null || id <= 0 || systemNotifyUpdateRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -87,7 +107,7 @@ public class SystemNotifyController {
      * 逻辑删除通知
      */
     @DeleteMapping("/{id}")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteSystemNotify(@PathVariable Long id) {
         if (id == null || id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -100,7 +120,7 @@ public class SystemNotifyController {
      * 分页查询所有通知
      */
     @GetMapping
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Page<SystemNotify>> listSystemNotifies(SystemNotifyQueryRequest systemNotifyQueryRequest) {
         if (systemNotifyQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);

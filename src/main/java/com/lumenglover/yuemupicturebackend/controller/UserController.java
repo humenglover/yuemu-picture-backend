@@ -1,9 +1,10 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.bean.BeanUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.DeleteRequest;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
@@ -37,6 +38,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.springframework.util.CollectionUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.util.StrUtil;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
 import java.io.IOException;
@@ -415,7 +417,7 @@ public class UserController {
      * 创建用户
      */
     @PostMapping("/add")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
         ThrowUtils.throwIf(userAddRequest == null, ErrorCode.PARAMS_ERROR);
         User user = new User();
@@ -434,7 +436,7 @@ public class UserController {
      * 批量删除
      */
     @PostMapping("/batchDelete")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> batchDeleteUser(@RequestBody List<Long> deleteRequestList,
                                                  HttpServletRequest request) {
         // 参数校验，如果传入的删除请求列表为空，则抛出参数异常
@@ -455,7 +457,7 @@ public class UserController {
      * 根据 id 获取用户（仅管理员）
      */
     @GetMapping("/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<User> getUserById(long id) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         User user = userService.getById(id);
@@ -507,7 +509,7 @@ public class UserController {
      * 删除用户
      */
     @PostMapping("/delete")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -576,7 +578,7 @@ public class UserController {
      * 批量删除用户
      */
     @PostMapping("/delete/batch")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteBatchUser(@RequestBody List<DeleteRequest> deleteRequestList) {
         if (CollectionUtils.isEmpty(deleteRequestList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -599,7 +601,7 @@ public class UserController {
      * @param userQueryRequest 查询请求参数
      */
     @PostMapping("/list/page/vo")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
         ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
         long current = userQueryRequest.getCurrent();
@@ -667,7 +669,7 @@ public class UserController {
      * 用户封禁/解禁（仅管理员）
      */
     @PostMapping("/ban")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> banOrUnbanUser(@RequestBody UserUnbanRequest request, HttpServletRequest httpRequest) {
         if (request == null || request.getUserId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -684,7 +686,7 @@ public class UserController {
      * 导出用户数据（仅管理员）
      */
     @PostMapping("/export")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public void exportUsers(@RequestBody UserExportRequest exportRequest,
                             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         try {

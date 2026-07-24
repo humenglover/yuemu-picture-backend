@@ -1,25 +1,43 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.RagService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.http.MediaType;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.*;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.servlet.http.HttpServletRequest;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import java.util.concurrent.Executor;
 
 /**
@@ -48,7 +66,7 @@ public class RagController {
      * @return 智能客服回答
      */
     @PostMapping("/chat")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "rag_chat", time = 60, count = 10, message = "RAG客服对话过于频繁，请稍后再试")
     public BaseResponse<RagChatResponse> chat(@RequestParam String question, HttpServletRequest request) {
         if (question == null || question.trim().isEmpty()) {
@@ -85,7 +103,7 @@ public class RagController {
      * @return 操作结果
      */
     @PostMapping("/clearContext")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "rag_clear_context", time = 60, count = 5, message = "清除RAG上下文过于频繁，请稍后再试")
     public BaseResponse<Boolean> clearContext(HttpServletRequest request) {
         try {
@@ -111,7 +129,7 @@ public class RagController {
      * @return SseEmitter 流式响应
      */
     @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     @RateLimiter(key = "rag_chat_stream", time = 60, count = 10, message = "RAG流式对话过于频繁，请稍后再试")
     public SseEmitter chatStream(@RequestParam String question,
             @RequestParam(required = false, defaultValue = "Qwen3.5-Flash") String model, HttpServletRequest request) {
@@ -173,7 +191,7 @@ public class RagController {
      * 搜索长期记忆（历史总结）
      */
     @GetMapping("/memory/search")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<String> searchMemory(@RequestParam("keyword") String keyword, HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         String result = ragService.searchLongTermMemory(loginUser.getId(), keyword);

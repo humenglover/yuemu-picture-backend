@@ -1,27 +1,48 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.BusinessException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.exception.ErrorCode;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.Data;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.http.MediaType;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.bind.annotation.*;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.lumenglover.yuemupicturebackend.service.VectorSyncService;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import javax.servlet.http.HttpServletResponse;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.io.IOException;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.CopyOnWriteArrayList;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.Executors;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.ScheduledExecutorService;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.ScheduledFuture;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.TimeUnit;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.atomic.AtomicBoolean;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -99,7 +120,7 @@ public class VectorSyncController {
      * 前端通过 new EventSource("/api/vector/sync/progress/stream") 连接
      */
     @GetMapping(value = "/progress/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public SseEmitter getSyncProgressStream(HttpServletResponse response) {
         // 设置响应头，防止 Nginx 或浏览器缓存导致 SSE 失效
         response.setHeader("X-Accel-Buffering", "no");
@@ -138,7 +159,7 @@ public class VectorSyncController {
      * 触发全量同步任务
      */
     @PostMapping("/start")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> startSync() {
         // 1. 获取全局锁，防止多个管理员同时点击
         if (!isRunning.compareAndSet(false, true)) {

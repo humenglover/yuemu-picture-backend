@@ -1,12 +1,17 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.core.util.RandomUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.core.util.StrUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
 import com.lumenglover.yuemupicturebackend.api.aliyunai.AliYunAiApi;
 import com.lumenglover.yuemupicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.lumenglover.yuemupicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
@@ -82,7 +87,7 @@ public class PictureController {
     @PostMapping("/upload")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
     @RateLimiter(key = "picture_upload", time = 60, count = 60, message = "图片上传过于频繁，请稍后再试")
-    // @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    // @SaCheckRole("admin")
     public BaseResponse<PictureVO> uploadPicture(
             @RequestPart("file") MultipartFile multipartFile,
             PictureUploadRequest pictureUploadRequest,
@@ -152,7 +157,7 @@ public class PictureController {
      * 更新图片（仅管理员可用）
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<Boolean> updatePicture(@RequestBody Picture picture) {
         return ResultUtils.success(pictureService.updatePicture(picture));
@@ -162,7 +167,7 @@ public class PictureController {
      * 根据 id 获取图片（仅管理员可用）
      */
     @GetMapping("/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Picture> getPictureById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
@@ -176,7 +181,7 @@ public class PictureController {
      * 批量
      */
     @PostMapping("/batchOption")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> batchOperationPicture(@RequestBody PictureOperation pictureOperation,
                                                        HttpServletRequest request) {
         // 参数校验
@@ -205,7 +210,7 @@ public class PictureController {
      * 分页获取图片列表（仅管理员可用）
      */
     @PostMapping("/list/page")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Page<Picture>> listPictureByPage(@RequestBody PictureQueryRequest pictureQueryRequest) {
         long current = pictureQueryRequest.getCurrent();
         long size = pictureQueryRequest.getPageSize();
@@ -289,7 +294,7 @@ public class PictureController {
      * 审核图片
      */
     @PostMapping("/review")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
                                                  HttpServletRequest request) {
         ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
@@ -303,7 +308,7 @@ public class PictureController {
      * 解决生产环境 Cloudflare 524 超时问题
      */
     @PostMapping("/upload/batch")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<String> uploadPictureByBatch(
             @RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
             HttpServletRequest request) {
@@ -451,7 +456,7 @@ public class PictureController {
      */
     @PostMapping("/upload/postimage")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
-    // @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    // @SaCheckRole("admin")
     public BaseResponse<PictureVO> uploadPostImage(
             @RequestPart("file") MultipartFile multipartFile,
             PictureUploadRequest pictureUploadRequest,
@@ -465,7 +470,7 @@ public class PictureController {
      * 设置图片精选状态
      */
     @PostMapping("/feature")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> setPictureFeature(@RequestBody PictureFeatureRequest pictureFeatureRequest,
                                                    HttpServletRequest request) {
         if (pictureFeatureRequest == null || pictureFeatureRequest.getId() == null) {
@@ -576,7 +581,7 @@ public class PictureController {
      * @return 图片权限信息
      */
     @GetMapping("/permission/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Picture> getPicturePermission(Long pictureId, HttpServletRequest request) {
         if (pictureId == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片ID不能为空");
@@ -669,7 +674,7 @@ public class PictureController {
      * 手动更新推荐相似度矩阵（仅管理员）
      */
     @PostMapping("/recommend/update_matrix")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> updateSimilarityMatrix() {
         recommendationManager.updateSimilarityMatrix();
         return ResultUtils.success(true);
@@ -679,7 +684,7 @@ public class PictureController {
      * AI识图自动写图片标题和简介 - 流式输出
      */
     @GetMapping(value = "/ai_generate_image/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
-    @AuthCheck
+    @SaCheckLogin
     @RateLimiter(key = "picture_ai_generate_image", time = 60, count = 10, message = "AI识图过于频繁，请稍后再试")
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter aiGenerateImageStream(
             @RequestParam("imageUrl") String imageUrl,

@@ -1,19 +1,32 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.entity.User;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.model.vo.CreatorAnalyticsVO;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.CreatorAnalyticsService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.lumenglover.yuemupicturebackend.service.UserService;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.extern.slf4j.Slf4j;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.GetMapping;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.RequestMapping;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import org.springframework.web.bind.annotation.RestController;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.annotation.Resource;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -34,7 +47,7 @@ public class CreatorAnalyticsController {
      * 获取当前用户的数据分析
      */
     @GetMapping("/my")
-    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @SaCheckLogin
     public BaseResponse<CreatorAnalyticsVO> getMyAnalytics(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         CreatorAnalyticsVO analytics = creatorAnalyticsService.getCreatorAnalytics(loginUser.getId());

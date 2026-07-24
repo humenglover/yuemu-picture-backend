@@ -1,6 +1,5 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
@@ -31,7 +30,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.util.StrUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lumenglover.yuemupicturebackend.exception.ThrowUtils;
@@ -61,7 +62,7 @@ public class AppController {
      * 上传新版本
      */
     @PostMapping("/upload")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> uploadNewVersion(@RequestParam("file") MultipartFile file,
                                                   @RequestParam("appVersion") String appVersionJson,
                                                   HttpServletRequest request) {

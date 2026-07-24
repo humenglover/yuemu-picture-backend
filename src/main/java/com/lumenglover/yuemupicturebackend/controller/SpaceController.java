@@ -1,11 +1,12 @@
 package com.lumenglover.yuemupicturebackend.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.util.RandomUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
 import com.lumenglover.yuemupicturebackend.common.BaseResponse;
 import com.lumenglover.yuemupicturebackend.common.DeleteRequest;
 import com.lumenglover.yuemupicturebackend.common.ResultUtils;
@@ -107,7 +108,7 @@ public class SpaceController {
      * 批量删除空间
      */
     @PostMapping("/delete/batch")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteBatchSpace(@RequestBody List<DeleteRequest> deleteRequestList) {
         if (CollectionUtils.isEmpty(deleteRequestList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -132,7 +133,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "space_update", time = 60, count = 10, message = "空间更新过于频繁，请稍后再试")
     public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest,
                                              HttpServletRequest request) {
@@ -161,7 +162,7 @@ public class SpaceController {
      * 根据 id 获取空间（仅管理员可用）
      */
     @GetMapping("/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Space> getSpaceById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
@@ -193,7 +194,7 @@ public class SpaceController {
      * 分页获取空间列表（仅管理员可用）
      */
     @PostMapping("/list/page")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Page<Space>> listSpaceByPage(@RequestBody SpaceQueryRequest spaceQueryRequest) {
         long current = spaceQueryRequest.getCurrent();
         long size = spaceQueryRequest.getPageSize();
@@ -285,7 +286,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/recommend")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     @RateLimiter(key = "space_recommend", time = 60, count = 10, message = "空间推荐设置过于频繁，请稍后再试")
     public BaseResponse<Boolean> setRecommendStatus(@RequestParam Long spaceId, @RequestParam Integer recommendStatus, HttpServletRequest request) {
         // 校验参数

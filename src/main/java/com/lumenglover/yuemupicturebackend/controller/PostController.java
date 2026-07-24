@@ -25,16 +25,21 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.core.util.RandomUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.json.JSONUtil;
 import com.lumenglover.yuemupicturebackend.constant.RedisConstant;
 import com.lumenglover.yuemupicturebackend.service.LikeRecordService;
 import com.lumenglover.yuemupicturebackend.model.dto.like.LikeRequest;
 import com.lumenglover.yuemupicturebackend.constant.CrawlerConstant;
 import com.lumenglover.yuemupicturebackend.annotation.RateLimiter;
-import com.lumenglover.yuemupicturebackend.annotation.AuthCheck;
 import com.lumenglover.yuemupicturebackend.constant.UserConstant;
 import com.lumenglover.yuemupicturebackend.manager.RecommendationManager;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.lumenglover.yuemupicturebackend.config.PexelsConfig;
@@ -88,7 +93,7 @@ public class PostController {
      * AI一键成帖 - 流式输出
      */
     @GetMapping(value = "/ai_generate/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
-    @AuthCheck
+    @SaCheckLogin
     @RateLimiter(key = "post_ai_generate", time = 60, count = 10, message = "AI生成过于频繁，请稍后再试")
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter aiGenerateStream(
             @RequestParam("prompt") String prompt,
@@ -535,7 +540,7 @@ public class PostController {
     }
 
     @PostMapping("/recommend/update_matrix")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole("admin")
     public BaseResponse<Boolean> updateSimilarityMatrix() {
         recommendationManager.updatePostSimilarityMatrix();
         return ResultUtils.success(true);
